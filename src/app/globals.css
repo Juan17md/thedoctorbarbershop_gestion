@@ -1,130 +1,207 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ========================================
+   URBAN PREMIUM DESIGN SYSTEM
+   The Doctor Barber Shop — Black, Red, White
+   ======================================== */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+@font-face {
+  font-family: 'Anton';
+  src: url('https://fonts.gstatic.com/s/anton/v25/1Ptgg87GROyAm3K8-C8CSKlv.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+@font-face {
+  font-family: 'Bebas Neue';
+  src: url('https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9WlhyyTh89Y.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+@font-face {
+  font-family: 'Inter';
+  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZhrib2Bg-4.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+@theme {
+  /* === Palette Urban Premium === */
+  --color-void: #050507;
+  --color-surface: #0f1014;
+  --color-surface-low: #0a0a0e;
+  --color-surface-high: #1a1b22;
+  --color-surface-highest: #24252e;
+  --color-surface-elevated: #16171f;
+  
+  /* Red Accent — Primary */
+  --color-primary: #DC2626;
+  --color-primary-light: #F87171;
+  --color-primary-dark: #991B1B;
+  --color-primary-muted: rgba(220, 38, 38, 0.15);
+  --color-primary-glow: rgba(220, 38, 38, 0.25);
+  
+  /* Data Colors */
+  --color-success: #10B981;
+  --color-info: #3B82F6;
+  --color-warning: #F59E0B;
+  --color-cyan: #06B6D4;
+  
+  /* Warm Neutrals */
+  --color-warm-50: #FAFAFA;
+  --color-warm-400: #A1A1AA;
+  --color-warm-500: #71717A;
+  
+  /* Text */
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #52525B;
+  
+  /* Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-accent: rgba(220, 38, 38, 0.3);
+  
+  /* === Tipografía Urban — 3 niveles === */
+  --font-hero: 'Anton', Impact, sans-serif;
+  --font-display: 'Bebas Neue', 'Anton', Impact, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* === Radio === */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  
+  /* === Sombras & Glows === */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.7);
+  --shadow-red-glow: 0 0 15px rgba(220, 38, 38, 0.2);
+  --shadow-red-strong: 0 0 25px rgba(220, 38, 38, 0.35);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border-default;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+  
   html {
-    @apply font-sans;
+    scroll-behavior: smooth;
+    font-family: var(--font-body);
   }
+  
+  body {
+    @apply bg-void text-text-primary antialiased;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Anton para h1 (hero), Bebas Neue para h2-h4 (menú/secciones) */
+  h1 {
+    font-family: var(--font-hero);
+    @apply tracking-[0.02em];
+  }
+  
+  h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    @apply tracking-[0.05em];
+  }
+}
+
+@layer components {
+  /* === Tarjetas Premium Urban === */
+  .card-premium {
+    @apply bg-surface border border-white/4 rounded-xl transition-all duration-500;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+  }
+  
+  .card-premium:hover {
+    @apply border-primary/20 -translate-y-1;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(220, 38, 38, 0.05);
+  }
+  
+  /* Urban Glassmorphism */
+  .glass-premium {
+    @apply backdrop-blur-2xl bg-void/60 border border-white/5;
+  }
+  
+  .glass-card {
+    @apply backdrop-blur-xl bg-surface/40 border border-white/8 shadow-lg;
+  }
+  
+  /* === Botones Urban === */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3 rounded-md font-display text-lg tracking-widest transition-all duration-300;
+    background: linear-gradient(to right, #991B1B, #DC2626, #991B1B);
+    background-size: 200% auto;
+    color: #FFFFFF;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+  }
+  
+  .btn-primary:hover {
+    @apply translate-y-[-2px] brightness-110;
+    background-position: right center;
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.5);
+  }
+
+  .btn-gold {
+    @apply btn-primary;
+  }
+  
+  /* Nav items refined */
+  .nav-item {
+    @apply flex items-center gap-4 px-5 py-3 rounded-lg transition-all duration-300;
+  }
+  
+  .nav-item-active {
+    @apply glass-premium text-primary border-r-2 border-primary bg-primary/5 shadow-red-glow;
+  }
+  
+  /* Header refined — Anton para impacto máximo */
+  .text-urban-header {
+    font-family: var(--font-hero);
+    @apply text-4xl sm:text-5xl md:text-6xl uppercase leading-none tracking-tight;
+  }
+
+  /* Clase utilitaria para forzar Anton */
+  .font-hero {
+    font-family: var(--font-hero);
+  }
+}
+
+@layer utilities {
+  .text-glow-red {
+    text-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
+  }
+  
+  .bg-primary-muted {
+    background-color: var(--color-primary-muted);
+  }
+  
+  .border-primary-glow {
+    border-color: var(--color-primary-glow);
+  }
+  
+  .glow-red {
+    box-shadow: var(--shadow-red-strong);
+  }
+  
+  .glow-red-sm {
+    box-shadow: var(--shadow-red-glow);
+  }
+
+  .glow-gold { @apply glow-red; }
+  .glow-gold-sm { @apply glow-red-sm; }
+  
+  .stagger-children > * {
+    @apply opacity-0 animate-fade-in-up;
+  }
+  
+  /* Animation delays */
+  .delay-children-1 > *:nth-child(1) { animation-delay: 100ms; }
+  .delay-children-1 > *:nth-child(2) { animation-delay: 200ms; }
+  .delay-children-1 > *:nth-child(3) { animation-delay: 300ms; }
+  .delay-children-1 > *:nth-child(4) { animation-delay: 400ms; }
 }

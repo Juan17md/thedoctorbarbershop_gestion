@@ -1,0 +1,96 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == "admin";
+    }
+    
+    function isBarber() {
+      return isAuthenticated() && (getUserRole() == "barber" || getUserRole() == "admin");
+    }
+    
+    // Usuarios
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isOwner(userId);
+      allow create: if isAdmin();
+    }
+    
+    // Servicios
+    match /services/{serviceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+    
+    // Clientes
+    match /clients/{clienteId} {
+      allow read: if isAuthenticated();
+      allow write: if isBarber();
+      allow create: if isBarber();
+    }
+    
+    // Reservas/Citas
+    match /reservas/{reservaId} {
+      allow read: if isAuthenticated();
+      allow write: if isBarber();
+      allow create: if isAuthenticated();
+    }
+
+    // Bloqueos de calendario
+    match /blocked_times/{blockId} {
+      allow read: if isAuthenticated();
+      allow write: if isBarber();
+      allow create: if isBarber();
+    }
+    
+    // Inventario
+    match /inventory/{productoId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+    
+    // Transacciones y Actas
+    match /transacciones/{actaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isBarber();
+      allow create: if isAdmin() || isBarber();
+    }
+    
+    // Finanzas
+    match /finances/{registroId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isBarber();
+      allow create: if isAdmin() || isBarber();
+    }
+
+    // Transacciones Bancarias
+    match /bank_transactions/{registroId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+
+    // Objetivos
+    match /objectives/{objId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+  }
+}
