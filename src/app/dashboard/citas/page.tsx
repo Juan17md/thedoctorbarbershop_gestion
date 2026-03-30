@@ -36,6 +36,7 @@ export default function CitasPage() {
   const [formData, setFormData] = useState({ barberId: "", serviceId: "", clientName: "", clientPhone: "", time: "" });
 
   useEffect(() => {
+    if (!userRole?.uid) return;
     let q;
     if (isAdmin) {
       q = query(collection(db, "blocked_times"), orderBy("date", "desc"));

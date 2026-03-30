@@ -266,11 +266,11 @@ export default function PerfilPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end w-full">
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto py-3 sm:py-2.5"
           >
             Editar Perfil
           </button>
@@ -347,16 +347,16 @@ export default function PerfilPage() {
             </div>
 
             {isEditing && (
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col sm:flex-row gap-4 mt-8">
                 <button 
                   onClick={() => { setIsEditing(false); setFormData({ name: userRole?.name || "", email: userRole?.email || "", phone: userRole?.phone || "" }); }}
-                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-text-secondary hover:bg-surface-high transition-colors"
+                  className="flex-1 px-4 py-3.5 rounded-xl border border-white/10 text-text-secondary hover:bg-surface-high transition-colors text-sm uppercase tracking-widest font-bold"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={handleSaveProfile}
-                  className="flex-1 btn-primary flex items-center justify-center gap-2"
+                  className="flex-1 btn-primary py-3.5 flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
                 >
                   <Save size={18} /> Guardar
                 </button>
@@ -368,7 +368,7 @@ export default function PerfilPage() {
         {/* Banca / Banco */}
         {!isAdmin && (
           <div className="card-premium p-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <h3 className="font-display text-xl text-white flex items-center gap-2">
                 <Wallet size={20} className="text-primary" />
                 Tu Banca
@@ -376,7 +376,7 @@ export default function PerfilPage() {
               <button 
                 onClick={() => setIsWithdrawModalOpen(true)}
                 disabled={!bankAccount || bankAccount.balance <= 0}
-                className="btn-primary text-sm disabled:opacity-50"
+                className="btn-primary w-full sm:w-auto text-xs py-3 sm:py-2 disabled:opacity-50 uppercase tracking-widest"
               >
                 Retirar
               </button>
@@ -438,14 +438,14 @@ export default function PerfilPage() {
       {/* Gestión de Barberos (Admin) */}
       {isAdmin && (
         <div className="card-premium p-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="font-display text-xl text-white flex items-center gap-2">
               <Users size={20} className="text-primary" />
               Gestión de Barberos
             </h3>
             <button 
               onClick={() => { setEditingBarberId(null); setNewBarberData({ email: "", password: "", name: "", phone: "", role: "barber" }); setIsNewBarberModalOpen(true); }}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 py-3 sm:py-2.5 text-xs uppercase tracking-widest"
             >
               <Plus size={18} /> Nuevo Barbero
             </button>
@@ -453,18 +453,18 @@ export default function PerfilPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {barbers.map((barber) => (
-              <div key={barber.uid} className="bg-surface-high/50 p-4 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User size={18} className="text-primary" />
+              <div key={barber.uid} className="bg-surface-high/50 p-5 rounded-xl border border-white/5 hover:border-primary/20 transition-all group">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/10">
+                      <User size={20} className="text-primary" />
                     </div>
-                    <div>
-                      <p className="font-medium text-white">{barber.name}</p>
-                      <p className="text-text-muted text-xs">{barber.email}</p>
+                    <div className="overflow-hidden">
+                      <p className="font-display text-base text-white truncate tracking-wide">{barber.name}</p>
+                      <p className="text-text-muted text-[11px] truncate opacity-80">{barber.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                     {barber.role === "admin" ? (
                       <Shield size={16} className="text-primary" />
                     ) : (
@@ -504,7 +504,7 @@ export default function PerfilPage() {
       {/* Modal de retiro */}
       {isWithdrawModalOpen && (
         <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+          <div className="card-premium p-6 sm:p-8 w-full max-w-md border-primary/20 shadow-red-strong">
             <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Retirar Ganancias</h2>
             <div className="mb-6">
               <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Balance disponible</p>
@@ -542,7 +542,7 @@ export default function PerfilPage() {
       {/* Modal de nuevo barbero */}
       {isNewBarberModalOpen && (
         <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+          <div className="card-premium p-6 sm:p-8 w-full max-w-md border-primary/20 shadow-red-strong">
             <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">{editingBarberId ? "Editar Usuario" : "Nuevo Barbero"}</h2>
             <div className="space-y-6">
               <div>

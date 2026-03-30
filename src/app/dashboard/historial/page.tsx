@@ -53,6 +53,7 @@ export default function HistorialPage() {
   );
 
   useEffect(() => {
+    if (!userRole?.uid) return;
     let q;
     if (esAdmin) {
       q = query(collection(db, "finances"), orderBy("date", "desc"));
@@ -173,38 +174,42 @@ export default function HistorialPage() {
   return (
     <div className="space-y-8">
       {/* Panel de filtros */}
-      <div className="card-premium p-5 space-y-4">
+      <div className="card-premium p-4 md:p-5 space-y-4">
         {/* Filtro de período */}
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex bg-void/60 rounded-lg p-1 border border-white/5">
-            {(["hoy", "semana", "mes", "todo"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriodo(p)}
-                className={`px-4 py-2 rounded-md font-display text-[12px] font-bold tracking-widest uppercase transition-all ${
-                  periodo === p
-                    ? "bg-primary/15 text-white border border-primary shadow-red-glow"
-                    : "text-text-secondary hover:text-white border border-transparent"
-                }`}
-              >
-                {p === "hoy" ? "Hoy" : p === "semana" ? "Semana" : p === "mes" ? "Mes" : "Todo"}
-              </button>
-            ))}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between font-display">
+          <div className="bg-void/60 rounded-lg p-1 border border-white/5 w-full sm:w-auto">
+            <div className="grid grid-cols-4 sm:flex items-center gap-1">
+              {(["hoy", "semana", "mes", "todo"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriodo(p)}
+                  className={`px-2 sm:px-4 py-2 rounded-md text-[9px] sm:text-[12px] font-bold tracking-widest uppercase transition-all whitespace-nowrap text-center ${
+                    periodo === p
+                      ? "bg-primary/15 text-white border border-primary shadow-red-glow"
+                      : "text-text-secondary hover:text-white border border-transparent"
+                  }`}
+                >
+                  {p === "hoy" ? "Hoy" : p === "semana" ? "Semana" : p === "mes" ? "Mes" : "Todo"}
+                </button>
+              ))}
+            </div>
           </div>
 
           {periodo === "hoy" && (
-            <DatePicker
-              value={fechaSeleccionada}
-              onChange={(v) => setFechaSeleccionada(v)}
-              placeholder="Seleccionar fecha"
-            />
+            <div className="w-full sm:w-auto">
+              <DatePicker
+                value={fechaSeleccionada}
+                onChange={(v) => setFechaSeleccionada(v)}
+                placeholder="Seleccionar fecha"
+              />
+            </div>
           )}
         </div>
 
         {/* Búsqueda y filtros avanzados */}
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3 items-center">
           {/* Búsqueda */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="md:flex-1">
             <SearchInput
               value={busqueda}
               onChange={setBusqueda}
@@ -212,93 +217,95 @@ export default function HistorialPage() {
             />
           </div>
 
-          {/* Filtro barbero (solo admin) */}
-          {esAdmin && (
-            <div className="min-w-[170px]">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Filtro barbero (solo admin) */}
+            {esAdmin && (
+              <div className="flex-1 sm:min-w-[170px]">
+                <Select
+                  options={[
+                    { value: "todos", label: "Todos los barberos" },
+                    ...opcionesBarberos.map((b) => ({ value: b, label: b })),
+                  ]}
+                  value={filtroBarbero}
+                  onChange={setFiltroBarbero}
+                  placeholder="Todos los barberos"
+                />
+              </div>
+            )}
+
+            {/* Filtro servicio */}
+            <div className="flex-1 sm:min-w-[170px]">
               <Select
                 options={[
-                  { value: "todos", label: "Todos los barberos" },
-                  ...opcionesBarberos.map((b) => ({ value: b, label: b })),
+                  { value: "todos", label: "Todos los servicios" },
+                  ...opcionesServicios.map((s) => ({ value: s, label: s })),
                 ]}
-                value={filtroBarbero}
-                onChange={setFiltroBarbero}
-                placeholder="Todos los barberos"
+                value={filtroServicio}
+                onChange={setFiltroServicio}
+                placeholder="Todos los servicios"
               />
             </div>
-          )}
-
-          {/* Filtro servicio */}
-          <div className="min-w-[170px]">
-            <Select
-              options={[
-                { value: "todos", label: "Todos los servicios" },
-                ...opcionesServicios.map((s) => ({ value: s, label: s })),
-              ]}
-              value={filtroServicio}
-              onChange={setFiltroServicio}
-              placeholder="Todos los servicios"
-            />
           </div>
 
           {/* Limpiar filtros */}
           {hayFiltrosActivos && (
             <button
               onClick={limpiarFiltros}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-white border border-white/10 hover:border-white/20 transition-all"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-white border border-white/10 hover:border-white/20 transition-all w-full md:w-auto"
             >
               <X size={14} />
-              Limpiar
+              <span className="md:hidden lg:inline">Limpiar</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Tarjetas de métricas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card-premium p-5 group hover:border-primary/20 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <Scissors size={18} className="text-primary" />
-            <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="card-premium p-4 md:p-5 group hover:border-primary/20 transition-colors">
+          <div className="flex items-center gap-2 mb-2 md:mb-3">
+            <Scissors size={14} className="text-primary md:w-[18px] md:h-[18px]" />
+            <p className="text-text-muted text-[8px] md:text-[10px] uppercase tracking-widest font-bold">
               Servicios
             </p>
           </div>
-          <p className="font-display text-3xl text-white">
+          <p className="font-display text-2xl md:text-3xl text-white">
             {registrosFiltrados.length}
           </p>
         </div>
 
-        <div className="card-premium p-5 group hover:border-emerald-400/20 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <DollarSign size={18} className="text-emerald-400" />
-            <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">
-              Total Generado
+        <div className="card-premium p-4 md:p-5 group hover:border-emerald-400/20 transition-colors">
+          <div className="flex items-center gap-2 mb-2 md:mb-3">
+            <DollarSign size={14} className="text-emerald-400 md:w-[18px] md:h-[18px]" />
+            <p className="text-text-muted text-[8px] md:text-[10px] uppercase tracking-widest font-bold">
+              Total
             </p>
           </div>
-          <p className="font-display text-3xl text-white">
+          <p className="font-display text-2xl md:text-3xl text-white">
             ${totalIngresos.toFixed(2)}
           </p>
         </div>
 
-        <div className="card-premium p-5 group hover:border-blue-400/20 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <Users size={18} className="text-blue-400" />
-            <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">
-              {esAdmin ? "Barberos (60%)" : "Tu Parte (60%)"}
+        <div className="card-premium p-4 md:p-5 group hover:border-blue-400/20 transition-colors">
+          <div className="flex items-center gap-2 mb-2 md:mb-3">
+            <Users size={14} className="text-blue-400 md:w-[18px] md:h-[18px]" />
+            <p className="text-text-muted text-[8px] md:text-[10px] uppercase tracking-widest font-bold">
+              {esAdmin ? "Barberos" : "Tu Parte"}
             </p>
           </div>
-          <p className="font-display text-3xl text-white">
+          <p className="font-display text-2xl md:text-3xl text-white">
             ${totalBarbero.toFixed(2)}
           </p>
         </div>
 
-        <div className="card-premium p-5 group hover:border-amber-400/20 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <Wallet size={18} className="text-amber-400" />
-            <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">
+        <div className="card-premium p-4 md:p-5 group hover:border-amber-400/20 transition-colors">
+          <div className="flex items-center gap-2 mb-2 md:mb-3">
+            <Wallet size={14} className="text-amber-400 md:w-[18px] md:h-[18px]" />
+            <p className="text-text-muted text-[8px] md:text-[10px] uppercase tracking-widest font-bold truncate">
               Barbería (40%)
             </p>
           </div>
-          <p className="font-display text-3xl text-white">
+          <p className="font-display text-2xl md:text-3xl text-white truncate">
             ${totalBarberia.toFixed(2)}
           </p>
         </div>
@@ -319,7 +326,8 @@ export default function HistorialPage() {
 
         {registrosPagina.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
+            {/* Vista de escritorio - Tabla */}
+            <div className="hidden lg:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="border-0 hover:bg-transparent">
@@ -366,14 +374,77 @@ export default function HistorialPage() {
               </Table>
             </div>
 
+            {/* Vista móvil - Tarjetas */}
+            <div className="lg:hidden divide-y divide-white/5">
+              {registrosPagina.map((r) => (
+                <div key={r.id} className="p-4 space-y-4 hover:bg-surface-high/20 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-white font-medium text-sm">
+                        {r.clientName}
+                      </p>
+                      <p className="text-text-muted text-[10px] uppercase tracking-wider font-bold mt-0.5">
+                        {r.date}
+                      </p>
+                    </div>
+                    <div className="px-2 py-1 rounded bg-primary/10 border border-primary/20">
+                      <span className="text-white font-display text-sm tracking-wider">
+                        ${r.totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-y-3 gap-x-6 text-xs">
+                    <div className="space-y-1">
+                      <p className="text-text-muted uppercase text-[9px] tracking-widest font-bold">
+                        Servicio
+                      </p>
+                      <p className="text-text-secondary">
+                        {r.serviceName}
+                      </p>
+                    </div>
+                    {esAdmin && (
+                      <div className="space-y-1">
+                        <p className="text-text-muted uppercase text-[9px] tracking-widest font-bold">
+                          Barbero
+                        </p>
+                        <p className="text-text-secondary">
+                          {r.barberName}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="bg-void/40 p-2 rounded-lg border border-white/5">
+                      <p className="text-text-muted text-[9px] uppercase tracking-widest font-bold mb-1">
+                        {esAdmin ? "Barbero (60%)" : "Tu Parte"}
+                      </p>
+                      <p className="text-emerald-400 font-display text-sm">
+                        ${r.barberShare.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-void/40 p-2 rounded-lg border border-white/5">
+                      <p className="text-text-muted text-[9px] uppercase tracking-widest font-bold mb-1">
+                        Barbería (40%)
+                      </p>
+                      <p className="text-blue-400 font-display text-sm">
+                        ${r.barberiaShare.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {/* Paginación */}
             {totalPaginas > 1 && (
-              <div className="p-4 border-t border-white/5 flex items-center justify-between gap-4 flex-wrap">
-                <p className="text-text-muted text-xs">
+              <div className="p-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-text-muted text-xs text-center sm:text-left order-2 sm:order-1">
                   Página {pagina} de {totalPaginas} &middot;{" "}
                   {registrosFiltrados.length} registros
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 order-1 sm:order-2">
                   <button
                     onClick={() => setPagina((p) => Math.max(1, p - 1))}
                     disabled={pagina === 1}
@@ -382,19 +453,21 @@ export default function HistorialPage() {
                     <ChevronLeft size={15} />
                   </button>
 
-                  {paginasVisibles.map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setPagina(num)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                        pagina === num
-                          ? "bg-primary/20 text-white border border-primary shadow-red-glow"
-                          : "text-text-muted hover:text-white border border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
+                  <div className="flex items-center gap-1.5">
+                    {paginasVisibles.map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setPagina(num)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                          pagina === num
+                            ? "bg-primary/20 text-white border border-primary shadow-red-glow"
+                            : "text-text-muted hover:text-white border border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
 
                   <button
                     onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}

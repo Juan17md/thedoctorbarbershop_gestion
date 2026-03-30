@@ -139,77 +139,79 @@ export default function EstadisticasPage() {
             </h2>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {(["day", "week", "month"] as const).map((period) => (
-              <button
-                key={period}
-                onClick={() => setPeriodFilter(period)}
-                className={`min-w-24 px-5 py-2.5 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all border ${
-                  periodFilter === period
-                    ? "bg-primary text-white border-primary shadow-red-glow"
-                    : "bg-surface-high text-text-muted border-white/5 hover:border-primary/30 hover:text-white"
-                }`}
-              >
-                {period === "day" ? "Hoy" : period === "week" ? "Semana" : "Mes"}
-              </button>
-            ))}
+          <div className="bg-void/60 rounded-lg p-1 border border-white/5 w-full lg:w-auto">
+            <div className="grid grid-cols-3 lg:flex items-center gap-1">
+              {(["day", "week", "month"] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setPeriodFilter(period)}
+                  className={`px-3 py-2.5 rounded-md font-display text-[11px] sm:text-[13px] font-bold tracking-widest uppercase transition-all border text-center whitespace-nowrap ${
+                    periodFilter === period
+                      ? "bg-primary text-white border-primary shadow-red-glow"
+                      : "bg-surface-high/50 text-text-muted border-transparent hover:border-primary/30 hover:text-white"
+                  }`}
+                >
+                  {period === "day" ? "Hoy" : period === "week" ? "Semana" : "Mes"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <div className="card-premium p-6 min-h-[170px] flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Scissors size={20} className="text-primary" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+        <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+              <Scissors size={16} className="text-primary md:w-[20px] md:h-[20px]" />
             </div>
-            <span className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">Servicios</span>
+            <span className="text-text-muted text-[8px] md:text-[10px] font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase opacity-70">Servicios</span>
           </div>
-          <p className="font-display text-5xl text-white tracking-tight leading-none">{totalServices}</p>
+          <p className="font-display text-3xl md:text-5xl text-white tracking-tight leading-none">{totalServices}</p>
         </div>
 
-        <div className="card-premium p-6 min-h-[170px] flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-              <DollarSign size={20} className="text-emerald-400" />
+        <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <DollarSign size={16} className="text-emerald-400 md:w-[20px] md:h-[20px]" />
             </div>
-            <span className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
-              Ingreso Barbero
+            <span className="text-text-muted text-[8px] md:text-[10px] font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase opacity-70 shrink-0 truncate">
+              Barbero
             </span>
           </div>
-          <p className="font-display text-5xl text-white tracking-tight leading-none">${ingresosBarbero.toFixed(2)}</p>
+          <p className="font-display text-3xl md:text-5xl text-white tracking-tight leading-none truncate">${ingresosBarbero.toFixed(2)}</p>
         </div>
 
-        <div className="card-premium p-6 min-h-[170px] flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-              <DollarSign size={20} className="text-cyan-400" />
+        <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shrink-0">
+              <DollarSign size={16} className="text-cyan-400 md:w-[20px] md:h-[20px]" />
             </div>
-            <span className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
-              Ingreso Barbería
+            <span className="text-text-muted text-[8px] md:text-[10px] font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase opacity-70 shrink-0 truncate">
+              Barbería
             </span>
           </div>
-          <p className="font-display text-5xl text-white tracking-tight leading-none">${ingresosBarberia.toFixed(2)}</p>
+          <p className="font-display text-3xl md:text-5xl text-white tracking-tight leading-none truncate">${ingresosBarberia.toFixed(2)}</p>
         </div>
 
-        <div className="card-premium p-6 min-h-[170px] flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-              <TrendingUp size={20} className="text-blue-400" />
+        <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
+              <TrendingUp size={16} className="text-blue-400 md:w-[20px] md:h-[20px]" />
             </div>
-            <span className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">Promedio</span>
+            <span className="text-text-muted text-[8px] md:text-[10px] font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase opacity-70">Promedio</span>
           </div>
-          <p className="font-display text-5xl text-white tracking-tight leading-none">${avgTicket.toFixed(2)}</p>
+          <p className="font-display text-3xl md:text-5xl text-white tracking-tight leading-none truncate">${avgTicket.toFixed(0)}</p>
         </div>
 
-        <div className="card-premium p-6 min-h-[170px] flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-              <Activity size={20} className="text-amber-400" />
+        <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+              <Activity size={16} className="text-amber-400 md:w-[20px] md:h-[20px]" />
             </div>
-            <span className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">Serv/Día</span>
+            <span className="text-text-muted text-[8px] md:text-[10px] font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase opacity-70 shrink-0 truncate">Serv/Día</span>
           </div>
-          <p className="font-display text-5xl text-white tracking-tight leading-none">
+          <p className="font-display text-3xl md:text-5xl text-white tracking-tight leading-none">
             {Object.keys(dailyStats).length > 0 ? (totalServices / Object.keys(dailyStats).length).toFixed(1) : 0}
           </p>
         </div>
@@ -329,62 +331,68 @@ export default function EstadisticasPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {Object.entries(servicesByType)
               .sort((a, b) => b[1] - a[1])
               .map(([service, count], index) => {
                 const percentage = totalServices > 0 ? (count / totalServices) * 100 : 0;
-
+                
                 return (
                   <div
                     key={service}
-                    className="bg-void/50 p-5 sm:p-6 rounded-2xl border border-white/5 group hover:border-primary/30 hover:bg-void/70 transition-all"
+                    className="bg-surface-high/40 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-white/5 group hover:border-primary/40 hover:bg-surface-high/60 transition-all duration-300 relative overflow-hidden"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                        <span className="font-display text-xl text-primary tracking-widest">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                      </div>
+                    {/* Decoración de fondo */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-all" />
 
-                      <div className="flex-1 min-w-0 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-white font-display text-xl sm:text-2xl tracking-[0.04em] uppercase leading-tight break-words">
-                              {service}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-bold uppercase tracking-[0.18em]">
-                              {count} servicios
+                    <div className="relative z-10 flex flex-col gap-4">
+                      {/* Cabecera: Ranking + Nombre */}
+                      <div className="flex items-center gap-4">
+                        <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-void/60 border border-white/10 flex items-center justify-center shadow-lg group-hover:border-primary/30 transition-colors">
+                          <span className="font-hero text-lg sm:text-xl text-primary tracking-tight">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-white font-display text-lg sm:text-xl tracking-wide uppercase leading-tight truncate group-hover:text-primary-light transition-colors">
+                            {service}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-text-muted uppercase tracking-widest font-bold">
+                              Ranking #{index + 1}
+                            </span>
+                            <div className="w-1 h-1 rounded-full bg-white/20" />
+                            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                              {percentage.toFixed(1)}% Participación
                             </span>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="space-y-2">
-                          <div className="h-3 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                            <div
-                              className="h-full bg-linear-to-r from-primary-dark via-primary to-orange-400 rounded-full transition-all duration-1000"
-                              style={{ width: `${percentage}%` }}
-                            />
+                      {/* Cuerpo: Estadísticas y Barra */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-display text-2xl text-white tracking-widest">
+                              {count}
+                            </span>
+                            <span className="text-[9px] text-text-muted uppercase font-bold tracking-widest">
+                              Servicios realizados
+                            </span>
                           </div>
-
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-muted uppercase tracking-[0.15em]">
-                                Participación
-                              </span>
-                              <span className="text-white font-semibold">{percentage.toFixed(1)}%</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-muted uppercase tracking-[0.15em]">
-                                Posición
-                              </span>
-                              <span className="text-primary font-semibold">#{index + 1}</span>
-                            </div>
+                          
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/5">
+                            <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
+                            <span className="text-[9px] text-text-secondary uppercase font-bold tracking-tighter">Popular</span>
                           </div>
+                        </div>
+
+                        {/* Barra de progreso premium */}
+                        <div className="relative h-1.5 bg-void/60 rounded-full overflow-hidden border border-white/5">
+                          <div
+                            className="absolute inset-y-0 left-0 bg-linear-to-r from-primary-dark via-primary to-zinc-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(82,82,91,0.3)]"
+                            style={{ width: `${percentage}%` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -396,16 +404,18 @@ export default function EstadisticasPage() {
       )}
 
       {isAdmin && Object.keys(revenueByBarber).length > 0 && (
-        <div className="card-premium p-6">
-          <h3 className="font-display text-2xl text-white mb-6 tracking-[0.05em] uppercase">RENDIMIENTO POR <span className="text-primary">STAFF</span></h3>
-          <div className="overflow-x-auto">
+        <div className="card-premium p-5 md:p-6">
+          <h3 className="font-display text-xl md:text-2xl text-white mb-6 tracking-[0.05em] uppercase">RENDIMIENTO POR <span className="text-primary">STAFF</span></h3>
+          
+          {/* Escritorio - Tabla */}
+          <div className="hidden lg:block overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-0 hover:bg-transparent">
-                  <TableHead>Barbero</TableHead>
-                  <TableHead>Servicios</TableHead>
-                  <TableHead>Ingresos</TableHead>
-                  <TableHead>% Total</TableHead>
+                <TableRow className="border-0 hover:bg-transparent text-text-muted">
+                  <TableHead className="uppercase tracking-widest text-[10px] font-bold">Barbero</TableHead>
+                  <TableHead className="uppercase tracking-widest text-[10px] font-bold">Servicios</TableHead>
+                  <TableHead className="uppercase tracking-widest text-[10px] font-bold">Ingresos</TableHead>
+                  <TableHead className="uppercase tracking-widest text-[10px] font-bold text-right">% Participación</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -415,18 +425,49 @@ export default function EstadisticasPage() {
                     const services = filteredRecords.filter(r => r.barberName === barber).length;
                     const percentage = totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0;
                     return (
-                      <TableRow key={barber}>
-                        <TableCell className="text-text-primary font-medium tracking-wide">{barber}</TableCell>
-                        <TableCell className="text-text-secondary">{services}</TableCell>
-                        <TableCell className="text-primary font-display text-xl tracking-wider">
+                      <TableRow key={barber} className="hover:bg-surface-high/30 transition-colors">
+                        <TableCell className="text-text-primary font-medium tracking-wide py-4">{barber}</TableCell>
+                        <TableCell className="text-text-secondary py-4">{services}</TableCell>
+                        <TableCell className="text-primary font-display text-xl tracking-wider py-4">
                           ${revenue.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-text-muted text-sm">{percentage.toFixed(1)}%</TableCell>
+                        <TableCell className="text-text-muted text-right py-4 font-medium">{percentage.toFixed(1)}%</TableCell>
                       </TableRow>
                     );
                   })}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Móvil - Vista de Tarjetas */}
+          <div className="lg:hidden space-y-3">
+            {Object.entries(revenueByBarber)
+              .sort((a, b) => b[1] - a[1])
+              .map(([barber, revenue]) => {
+                const services = filteredRecords.filter(r => r.barberName === barber).length;
+                const percentage = totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0;
+                return (
+                  <div key={barber} className="bg-void/40 border border-white/5 rounded-xl p-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <p className="text-white font-display text-lg tracking-wide uppercase">{barber}</p>
+                      <div className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
+                        <span className="text-primary font-display text-sm">{percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">Servicios</p>
+                        <p className="text-text-secondary font-display text-lg tracking-widest">{services}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">Ingresos</p>
+                        <p className="text-emerald-400 font-display text-xl tracking-wider">${revenue.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

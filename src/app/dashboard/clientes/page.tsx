@@ -28,6 +28,7 @@ export default function ClientesPage() {
   const [formData, setFormData] = useState({ name: "", phone: "", email: "", notes: "" });
 
   useEffect(() => {
+    if (!userRole?.uid) return;
     let q;
     if (userRole?.role === "admin") {
       q = query(collection(db, "clients"), orderBy("name"));
@@ -88,10 +89,10 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end w-full">
         <button 
           onClick={() => { setIsModalOpen(true); setEditingId(null); setFormData({ name: "", phone: "", email: "", notes: "" }); }}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 text-sm py-3 sm:py-2.5 px-6"
         >
           <Plus size={18} /> Nuevo Cliente
         </button>

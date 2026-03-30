@@ -21,8 +21,11 @@ export default function DashboardPage() {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("today");
+  const [rankingFilter, setRankingFilter] = useState<"today" | "week" | "month">("today");
 
   useEffect(() => {
+    if (!userRole?.uid) return;
+    
     let q;
     if (isAdmin) {
       q = query(collection(db, "finances"), orderBy("date", "desc"));
@@ -55,7 +58,10 @@ export default function DashboardPage() {
   });
 
   const filteredRecords = timeFilter === "today" ? todayRecords : timeFilter === "week" ? weekRecords : monthRecords;
+  const rankingRecords = rankingFilter === "today" ? todayRecords : rankingFilter === "week" ? weekRecords : monthRecords;
+  
   const filterLabel = timeFilter === "today" ? "HOY" : timeFilter === "week" ? "SEMANA" : "MES";
+  const rankingLabel = rankingFilter === "today" ? "hoy" : rankingFilter === "week" ? "semana" : "mes";
 
   const dailyRevenue = todayRecords.reduce((sum, r) => sum + r.totalAmount, 0);
   const weeklyRevenue = weekRecords.reduce((sum, r) => sum + r.totalAmount, 0);
@@ -67,7 +73,7 @@ export default function DashboardPage() {
   const totalServices = records.length;
   const todayServices = todayRecords.length;
 
-  const revenueByBarber = isAdmin ? filteredRecords.reduce((acc, r) => {
+  const revenueByBarber = isAdmin ? rankingRecords.reduce((acc, r) => {
     acc[r.barberName] = (acc[r.barberName] || 0) + r.totalAmount;
     return acc;
   }, {} as Record<string, number>) : {};
@@ -119,7 +125,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-6">
           <div className="card-premium p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h3 className="font-display text-lg sm:text-2xl text-text-primary flex items-center gap-3 tracking-[0.05em] uppercase">
+              <h3 className="font-display text-lg sm:text-2xl text-text-primary flex flex-wrap items-center gap-x-3 gap-y-1 tracking-[0.05em] uppercase">
                 <Wallet size={22} className="text-primary" />
                 DISTRIBUCIÓN DE GANANCIAS
               </h3>
@@ -193,10 +199,27 @@ export default function DashboardPage() {
           </div>
 
           <div className="card-premium p-6">
-            <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
-              <Users size={22} className="text-primary" />
-              RANKING <span className="text-primary">BARBEROS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">({filterLabel})</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h3 className="font-display text-lg sm:text-2xl text-text-primary flex items-center gap-3 tracking-[0.05em] uppercase">
+                <Users size={22} className="text-primary" />
+                RANKING <span className="text-primary">BARBEROS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">({rankingLabel})</span>
+              </h3>
+              <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
+                {(["today", "week", "month"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setRankingFilter(filter)}
+                    className={`px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-bold transition-all ${
+                      rankingFilter === filter
+                        ? "bg-primary text-white"
+                        : "text-text-muted hover:text-white"
+                    }`}
+                  >
+                    {filter === "today" ? "Hoy" : filter === "week" ? "Semana" : "Mes"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {topBarbers.length > 0 ? (
               <div className="space-y-3">
                 {topBarbers.map(([name, amount], index) => (
@@ -412,7 +435,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6">
         <div className="card-premium p-6">
-          <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
+          <h3 className="font-display text-lg sm:text-2xl text-text-primary mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 tracking-[0.05em] uppercase">
             <Wallet size={22} className="text-primary" />
             DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span>
             <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>

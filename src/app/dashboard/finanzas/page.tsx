@@ -39,10 +39,11 @@ export default function FinanzasPage() {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
+  const [barbers, setBarbers] = useState<any[]>([]);
   const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("month");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ serviceId: "", clientName: "" });
+  const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
 
   useEffect(() => {
     if (!userRole?.uid) {
@@ -103,6 +104,24 @@ export default function FinanzasPage() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    
+    const consulta = query(
+      collection(db, "users"), 
+      where("role", "==", "barber"),
+      orderBy("name")
+    );
+    const unsubscribe = onSnapshot(consulta, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBarbers(data);
+    });
+    return () => unsubscribe();
+  }, [isAdmin]);
 
   const getFilteredRecords = () => {
     const now = new Date();
@@ -187,6 +206,17 @@ export default function FinanzasPage() {
     const service = serviciosDisponibles.find(s => s.id === formData.serviceId);
     if (!service) return;
 
+    // Determinar barbero (el seleccionado por admin o el actual)
+    const finalBarberId = isAdmin ? (formData.barberId || userRole?.uid) : userRole?.uid;
+    const finalBarber = isAdmin && formData.barberId 
+      ? (barbers.find(b => b.id === formData.barberId) || userRole)
+      : userRole;
+
+    if (!finalBarberId) {
+      alert("Debes seleccionar un barbero");
+      return;
+    }
+
     const totalAmount = service.price;
     const barberShareAmount = totalAmount * 0.6;
     const barberiaShareAmount = totalAmount * 0.4;
@@ -196,8 +226,8 @@ export default function FinanzasPage() {
     await addDoc(collection(db, "finances"), {
       serviceId: service.id,
       serviceName: service.name,
-      barberId: userRole?.uid,
-      barberName: userRole?.name,
+      barberId: finalBarberId,
+      barberName: finalBarber.name,
       clientName: formData.clientName || "Cliente",
       totalAmount,
       barberShare: barberShareAmount,
@@ -207,7 +237,7 @@ export default function FinanzasPage() {
     });
 
     // 2. Actualizar banco del barbero
-    const barberBankRef = doc(db, "bank", userRole?.uid || "");
+    const barberBankRef = doc(db, "bank", finalBarberId || "");
     const barberBankDoc = await getDoc(barberBankRef);
     if (barberBankDoc.exists()) {
       await updateDoc(barberBankRef, {
@@ -217,8 +247,8 @@ export default function FinanzasPage() {
       });
     } else {
       await setDoc(barberBankRef, {
-        userId: userRole?.uid,
-        userName: userRole?.name,
+        userId: finalBarberId,
+        userName: finalBarber.name,
         balance: barberShareAmount,
         totalEarned: barberShareAmount,
         totalPaid: 0,
@@ -228,8 +258,8 @@ export default function FinanzasPage() {
 
     // 3. Agregar transacción al historial del banco del barbero
     await addDoc(collection(db, "bank_transactions"), {
-      userId: userRole?.uid,
-      userName: userRole?.name,
+      userId: finalBarberId,
+      userName: finalBarber.name,
       type: "earning",
       amount: barberShareAmount,
       description: `Servicio: ${service.name}`,
@@ -263,7 +293,7 @@ export default function FinanzasPage() {
       userName: "The Doctor Barber Shop",
       type: "earning",
       amount: barberiaShareAmount,
-      description: `Servicio: ${service.name} (${userRole?.name})`,
+      description: `Servicio: ${service.name} (${finalBarber.name})`,
       date,
       createdAt: new Date()
     });
@@ -279,7 +309,7 @@ export default function FinanzasPage() {
       
       // Solo actualizar si el objetivo está vigente
       if (endDate && endDate >= now) {
-        const isBarberObjective = objData.barberoId && objData.barberoId === userRole?.uid;
+        const isBarberObjective = objData.barberoId && objData.barberoId === finalBarberId;
         const isGeneralObjective = !objData.barberoId;
         
         if (isBarberObjective || isGeneralObjective) {
@@ -296,7 +326,7 @@ export default function FinanzasPage() {
     }
 
     setIsModalOpen(false);
-    setFormData({ serviceId: "", clientName: "" });
+    setFormData({ serviceId: "", clientName: "", barberId: "" });
   };
 
   const revenueByService = filteredRecords.reduce((acc, r) => {
@@ -310,39 +340,56 @@ export default function FinanzasPage() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
+    <div className="space-y-8 pb-10">
+      {/* Cabecera Desktop */}
+      <div className="hidden lg:flex justify-between items-end mb-2">
+        <div>
+          <h1 className="font-display text-4xl text-white tracking-widest uppercase">Historial Financiero</h1>
+          <p className="text-text-muted text-[10px] tracking-[0.3em] font-bold mt-1 opacity-70">CENTRO DE CONTROL Y RENDIMIENTO</p>
+        </div>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="btn-primary flex items-center gap-2 px-8 py-3.5 text-xs tracking-[0.2em] font-bold uppercase shadow-red-strong hover:-translate-y-0.5 transition-all"
+        >
+          <Plus size={18} /> Registrar Servicio
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {/* Card Filtros Período (Bento Style) */}
-        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-3 lg:col-span-1">
-          <div>
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-1">Vista General</p>
-            <h2 className="font-display text-2xl text-white mb-6 tracking-widest uppercase">Rendimiento del Período</h2>
-          </div>
-          
-          <div className="flex flex-col gap-4">
-            <div className="flex bg-void/50 rounded-lg p-1 border border-white/5 w-full">
+        <div className="card-premium p-6 sm:p-8 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-3 lg:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+            <div>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-1">Vista General</p>
+              <h2 className="font-display text-2xl text-white tracking-widest uppercase mb-1">Rendimiento</h2>
+              <p className="text-[9px] text-text-muted uppercase font-bold tracking-widest">Estadísticas actuales del negocio</p>
+            </div>
+            
+            <div className="flex bg-void/50 rounded-lg p-1 border border-white/5 w-full sm:w-auto h-fit">
               <button 
                 onClick={() => setPeriodFilter("day")}
-                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
               >
                 Hoy
               </button>
               <button 
                 onClick={() => setPeriodFilter("week")}
-                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
               >
                 Semana
               </button>
               <button 
                 onClick={() => setPeriodFilter("month")}
-                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
               >
                 Mes
               </button>
             </div>
-
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-4">
             {periodFilter === "day" && (
-              <div className="w-full">
+              <div className="w-full sm:w-64">
                 <DatePicker
                   value={selectedDate}
                   onChange={(v) => setSelectedDate(v)}
@@ -353,10 +400,15 @@ export default function FinanzasPage() {
             
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="btn-primary text-xs py-3 w-full flex items-center justify-center gap-2 mt-2"
+              className="lg:hidden btn-primary text-xs py-3 w-full flex items-center justify-center gap-2"
             >
               <Plus size={16} /> Registrar Servicio
             </button>
+
+            <div className="hidden lg:flex items-center gap-2 text-text-muted/60">
+              <TrendingUp size={14} className="text-emerald-500" />
+              <p className="text-[10px] uppercase font-bold tracking-widest">Punto de control financiero activo</p>
+            </div>
           </div>
         </div>
 
@@ -392,34 +444,41 @@ export default function FinanzasPage() {
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-fade-in-up">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
           <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
-            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Ingresos (Actas)</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Ingresos (Actas)</p>
             <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-red-500/80">
-            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Egresos (Gastos)</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Egresos (Gastos)</p>
             <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
           </div>
-          <div className="card-premium p-6 border-l-4 border-primary">
-            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Barbería (40%)</p>
+          <div className="card-premium p-6 border-l-4 border-l-primary">
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Barbería (40%)</p>
             <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${barberiaShare.toFixed(2)}</p>
           </div>
           
-          <div className="card-premium p-6 border border-primary/30 sm:col-span-3 bg-primary/5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="card-premium p-8 border border-primary/30 sm:col-span-3 lg:col-span-4 bg-linear-to-br from-primary/10 via-void to-void shadow-red-strong overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+            
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
               <div>
-                <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-1">Balance Neto (Total)</p>
-                <p className="font-display text-5xl text-white font-bold tracking-tight leading-none">${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span></p>
-              </div>
-              <div className="flex border border-white/5 rounded-lg overflow-hidden bg-void/30 p-4 w-full sm:w-auto">
-                <div className="text-center px-4 border-r border-white/5">
-                  <p className="text-[10px] text-text-muted uppercase font-bold mb-1">Monto Total</p>
-                  <p className="font-display text-xl text-white">${totalRevenue.toFixed(2)}</p>
+                <p className="text-text-secondary font-display text-[10px] tracking-[0.3em] uppercase mb-2 font-bold">Balance General Neto</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-primary font-display text-2xl mr-1">$</span>
+                  <p className="font-display text-6xl text-white font-bold tracking-tight leading-none">${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-3xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span></p>
                 </div>
-                <div className="text-center px-4">
-                  <p className="text-[10px] text-text-muted uppercase font-bold mb-1">Diferencial</p>
-                  <p className="font-display text-xl text-primary">${(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2)}</p>
+                <p className="text-[10px] text-text-muted mt-4 uppercase tracking-[0.2em] font-medium opacity-60">Cálculo basado en ingresos brutos, gastos operativos y comisiones de barbería.</p>
+              </div>
+              
+              <div className="flex border border-white/10 rounded-2xl overflow-hidden bg-void/50 backdrop-blur-sm p-1 w-full lg:w-auto">
+                <div className="flex-1 lg:flex-none text-center px-10 py-6 border-r border-white/5">
+                  <p className="text-[11px] text-text-muted uppercase font-bold tracking-widest mb-2 opacity-50">Ingresos Totales</p>
+                  <p className="font-display text-2xl text-white tracking-widest font-bold">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-sm opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
+                </div>
+                <div className="flex-1 lg:flex-none text-center px-10 py-6 bg-primary/5">
+                  <p className="text-[11px] text-primary/80 uppercase font-bold tracking-widest mb-2">Margen Operativo</p>
+                  <p className="font-display text-2xl text-primary tracking-widest font-bold">${(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2).split('.')[0]}<span className="text-sm opacity-50">.{(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2).split('.')[1]}</span></p>
                 </div>
               </div>
             </div>
@@ -563,6 +622,18 @@ export default function FinanzasPage() {
           <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
             <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Registrar Servicio</h2>
             <form onSubmit={handleRegisterService} className="space-y-6">
+              {isAdmin && (
+                <div>
+                  <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Barbero</label>
+                  <Select
+                    options={barbers.map(b => ({ value: b.id, label: b.name }))}
+                    value={formData.barberId}
+                    onChange={(val: string) => setFormData({ ...formData, barberId: val })}
+                    placeholder="Elegir barbero..."
+                    className="bg-void/50 border-white/10 rounded-md"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Servicio</label>
                 <Select
@@ -586,7 +657,7 @@ export default function FinanzasPage() {
               <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
                 <button 
                   type="button" 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setFormData({ serviceId: "", clientName: "", barberId: "" }); }}
                   className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
                 >
                   Cancelar

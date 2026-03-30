@@ -79,6 +79,7 @@ export default function ObjetivosPage() {
   }, [isAdmin]);
 
   useEffect(() => {
+    if (!userRole?.uid) return;
     let q;
     if (isAdmin) {
       q = query(collection(db, "objectives"), orderBy("endDate", "desc"));
@@ -206,14 +207,14 @@ export default function ObjetivosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end mb-8 animate-fade-in-up">
+      <div className="flex items-center justify-end mb-8 animate-fade-in-up w-full">
         <button 
           onClick={() => {
             setEditingId(null);
             setFormData({ name: "", targetAmount: "", endDate: "" });
             setIsModalOpen(true);
           }}
-          className="btn-primary text-sm py-2.5 px-6"
+          className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 text-sm py-3 sm:py-2.5 px-6"
         >
           <Plus size={18} /> Nuevo Objetivo
         </button>
@@ -224,7 +225,7 @@ export default function ObjetivosPage() {
           const progress = getProgress(obj);
 
           return (
-            <div key={obj.id} className="card-premium p-6 flex flex-col justify-between border border-white/8 bg-gradient-to-br from-surface/95 via-surface/92 to-surface-high/60 shadow-[0_0_18px_rgba(255,255,255,0.03)]">
+            <div key={obj.id} className="card-premium p-6 flex flex-col justify-between border border-white/8 bg-linear-to-br from-surface/95 via-surface/92 to-surface-high/60 shadow-[0_0_18px_rgba(255,255,255,0.03)]">
               <div className="flex items-start justify-between mb-6">
                 <h3 className="font-display text-2xl tracking-wide text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                   {obj.name}
@@ -251,19 +252,19 @@ export default function ObjetivosPage() {
               
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] px-4 py-3">
+                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/4 px-4 py-3">
                     <p className="text-[10px] font-bold tracking-[0.2em] text-text-muted uppercase mb-2">Meta</p>
                     <p className="font-display text-2xl text-emerald-400 tracking-wide">${obj.targetAmount}</p>
                   </div>
-                  <div className="rounded-xl border border-blue-500/15 bg-blue-500/[0.04] px-4 py-3">
+                  <div className="rounded-xl border border-blue-500/15 bg-blue-500/4 px-4 py-3">
                     <p className="text-[10px] font-bold tracking-[0.2em] text-text-muted uppercase mb-2">Actual</p>
                     <p className="font-display text-2xl text-blue-400 tracking-wide">${obj.currentAmount}</p>
                   </div>
                 </div>
                 <div className="relative">
-                  <div className="h-3.5 bg-gradient-to-r from-white/[0.03] to-white/[0.06] rounded-full overflow-hidden border border-white/8 shadow-inner shadow-black/40">
+                  <div className="h-3.5 bg-linear-to-r from-white/3 to-white/6 rounded-full overflow-hidden border border-white/8 shadow-inner shadow-black/40">
                     <div
-                      className={`h-full transition-all duration-1000 ease-out relative overflow-hidden rounded-full ${progress >= 100 ? "bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-300 shadow-[0_0_16px_rgba(52,211,153,0.32)]" : "bg-gradient-to-r from-amber-400 via-orange-400 to-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.35)]"}`}
+                      className={`h-full transition-all duration-1000 ease-out relative overflow-hidden rounded-full ${progress >= 100 ? "bg-linear-to-r from-emerald-500 via-emerald-400 to-lime-300 shadow-[0_0_16px_rgba(52,211,153,0.32)]" : "bg-linear-to-r from-amber-400 via-orange-400 to-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.35)]"}`}
                       style={{ width: `${progress}%` }}
                     >
                       <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent)] animate-pulse"></div>
@@ -288,7 +289,7 @@ export default function ObjetivosPage() {
                 </div>
 
                 {isAdmin && (
-                  <div className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                  <div className="rounded-xl border border-white/8 bg-white/3 px-4 py-3">
                     <p className="text-[10px] font-bold tracking-[0.2em] text-text-muted uppercase mb-2">
                       Registrado por
                     </p>

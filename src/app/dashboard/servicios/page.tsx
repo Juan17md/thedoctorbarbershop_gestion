@@ -88,11 +88,11 @@ export default function ServiciosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end mb-8 animate-fade-in-up">
+      <div className="flex items-center justify-end mb-8 animate-fade-in-up w-full">
         {puedeGestionarServicios && (
           <button 
             onClick={() => { setIsModalOpen(true); setEditingId(null); setFormData({ name: "", price: "", duration: 45, description: "" }); }}
-            className="btn-primary flex items-center gap-2 text-sm py-2.5 px-6"
+            className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 text-sm py-3 sm:py-2.5 px-6"
           >
             <Plus size={18} /> Nuevo Servicio
           </button>
@@ -138,7 +138,7 @@ export default function ServiciosPage() {
 
                 <div className="flex items-start justify-between gap-4 border-t border-white/6 pt-5">
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-display text-[1.9rem] leading-none tracking-wide text-white whitespace-normal break-words md:truncate">
+                    <h3 className="font-display text-[1.9rem] leading-none tracking-wide text-white whitespace-normal wrap-break-word md:truncate">
                       {servicio.name}
                     </h3>
 

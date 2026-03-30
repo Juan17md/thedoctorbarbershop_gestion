@@ -69,12 +69,10 @@ export default function ActasGastosPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up stagger-1">
-        
-        
-        <div className="flex gap-3">
+        <div className="flex gap-3 w-full sm:w-auto">
           <button 
             onClick={() => setModalAbierto(true)}
-            className="btn-primary shrink-0 text-sm py-2.5 flex items-center gap-2"
+            className="btn-primary w-full sm:w-auto shrink-0 text-sm py-3 sm:py-2.5 flex items-center justify-center gap-2"
           >
             <Plus size={16} />
             <span>Nuevo Registro</span>
