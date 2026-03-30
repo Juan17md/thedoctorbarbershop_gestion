@@ -245,12 +245,12 @@ export default function InventarioPage() {
 
     return (
       <div className="card-premium overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
-          <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
+          <div>
             <h3 className="font-display text-xl text-white tracking-[0.2em] uppercase">
               {titulo}
             </h3>
-            <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
+            <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70 mt-1">
               Total: {resumenCategoria.total} · Bajo: {resumenCategoria.low} · Agotado:{" "}
               {resumenCategoria.out}
             </p>
@@ -264,7 +264,7 @@ export default function InventarioPage() {
                 resetForm(categoria);
                 setIsModalOpen(true);
               }}
-              className="btn-primary w-full sm:w-auto px-4 py-2 md:px-5 md:py-3 text-sm md:text-lg"
+              className="btn-primary w-auto px-4 py-2 md:px-5 md:py-3"
             >
               <Plus size={20} className="mr-2" /> NUEVO{" "}
               {categoria === "equipos" ? "EQUIPO" : "MATERIAL"}
@@ -272,8 +272,7 @@ export default function InventarioPage() {
           )}
         </div>
 
-        {/* Vista Escritorio (Tabla) */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-0 hover:bg-transparent">
@@ -354,7 +353,7 @@ export default function InventarioPage() {
                             onClick={() => handleDelete(item.id)}
                             aria-label={`Eliminar ${item.name}`}
                             title={`Eliminar ${item.name}`}
-                            className="p-2 text-text-muted hover:text-danger transition-colors"
+                            className="p-2 text-text-muted hover:text-red-500 transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -366,83 +365,13 @@ export default function InventarioPage() {
               })}
             </TableBody>
           </Table>
+
+          {itemsFiltrados.length === 0 && (
+            <div className="text-center py-24 text-text-muted uppercase tracking-[0.3em] text-[10px] font-bold opacity-50">
+              No se encontraron {categoria === "equipos" ? "equipos" : "materiales"}
+            </div>
+          )}
         </div>
-
-        {/* Vista Móvil (Tarjetas) */}
-        <div className="md:hidden divide-y divide-white/5">
-          {itemsFiltrados.map((item) => {
-            const status = getStockStatus(item);
-            return (
-              <div key={item.id} className="p-5 space-y-4">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <h4 className="font-medium text-text-primary tracking-wide text-lg">
-                      {item.name}
-                    </h4>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-text-primary font-display text-xl tracking-widest">
-                      ${item.price.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-4">
-                    {categoria === "materiales" ? (
-                      <>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] uppercase tracking-widest text-text-muted font-bold">Cantidad</span>
-                          <span className="text-text-secondary font-display text-lg leading-none mt-1">{item.quantity ?? 0}</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] uppercase tracking-widest text-text-muted font-bold">Mínimo</span>
-                          <span className="text-text-muted font-display text-lg leading-none mt-1">{item.minQuantity ?? 0}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-widest text-text-muted font-bold mb-1">Estado</span>
-                        {status === "out" && (
-                          <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 font-display text-[10px] font-bold uppercase tracking-widest border border-red-500/20">MALO</span>
-                        )}
-                        {status === "low" && (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-display text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">REGULAR</span>
-                        )}
-                        {status === "ok" && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-display text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">NUEVO</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {isAdmin && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="p-3 bg-white/5 rounded-lg text-text-muted hover:text-white transition-colors border border-white/5"
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="p-3 bg-red-500/5 rounded-lg text-text-muted hover:text-danger transition-colors border border-red-500/5"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {itemsFiltrados.length === 0 && (
-          <div className="text-center py-24 text-text-muted uppercase tracking-[0.3em] text-[10px] font-bold opacity-50">
-            No se encontraron {categoria === "equipos" ? "equipos" : "materiales"}
-          </div>
-        )}
       </div>
     );
   };
@@ -465,65 +394,65 @@ export default function InventarioPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-        <div className="card-premium p-4 sm:p-6 group">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:border-primary/40 transition-colors">
-              <Package size={20} className="text-primary sm:w-[24px] sm:h-[24px]" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="card-premium p-6 group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:border-primary/40 transition-colors">
+              <Package size={24} className="text-primary" />
             </div>
             <div>
-              <p className="text-text-muted text-[9px] sm:text-[10px] font-bold tracking-widest sm:tracking-[0.2em] uppercase opacity-70">
-                Inventario
+              <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
+                Inventario Total
               </p>
-              <p className="font-display text-3xl sm:text-5xl text-white tracking-tight leading-none">
+              <p className="font-display text-5xl text-white tracking-tight leading-none">
                 {totalItems}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card-premium p-4 sm:p-6 border-amber-500/20 bg-amber-500/3">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-              <AlertTriangle size={20} className="text-amber-500 sm:w-[24px] sm:h-[24px]" />
+        <div className="card-premium p-6 border-amber-500/20 bg-amber-500/3">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+              <AlertTriangle size={24} className="text-amber-500" />
             </div>
             <div>
-              <p className="text-text-muted text-[9px] sm:text-[10px] font-bold tracking-widest sm:tracking-[0.2em] uppercase opacity-70">
+              <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
                 Stock Bajo
               </p>
-              <p className="font-display text-3xl sm:text-5xl text-white tracking-tight leading-none">
+              <p className="font-display text-5xl text-white tracking-tight leading-none">
                 {lowStockCount}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card-premium p-4 sm:p-6 border-red-500/20 bg-red-500/3">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-              <XCircle size={20} className="text-red-500 sm:w-[24px] sm:h-[24px]" />
+        <div className="card-premium p-6 border-red-500/20 bg-red-500/3">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+              <XCircle size={24} className="text-red-500" />
             </div>
             <div>
-              <p className="text-text-muted text-[9px] sm:text-[10px] font-bold tracking-widest sm:tracking-[0.2em] uppercase opacity-70">
+              <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
                 Agotados
               </p>
-              <p className="font-display text-3xl sm:text-5xl text-white tracking-tight leading-none">
+              <p className="font-display text-5xl text-white tracking-tight leading-none">
                 {outOfStockCount}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card-premium p-4 sm:p-6 border-emerald-500/20 bg-emerald-500/4">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-              <Check size={20} className="text-emerald-500 sm:w-[24px] sm:h-[24px]" />
+        <div className="card-premium p-6 border-emerald-500/20 bg-emerald-500/4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+              <Check size={24} className="text-emerald-500" />
             </div>
             <div>
-              <p className="text-text-muted text-[9px] sm:text-[10px] font-bold tracking-widest sm:tracking-[0.2em] uppercase opacity-70">
+              <p className="text-text-muted text-[10px] font-bold tracking-[0.2em] uppercase opacity-70">
                 En Stock
               </p>
-              <p className="font-display text-3xl sm:text-5xl text-white tracking-tight leading-none">
+              <p className="font-display text-5xl text-white tracking-tight leading-none">
                 {Math.max(0, totalItems - lowStockCount - outOfStockCount)}
               </p>
             </div>

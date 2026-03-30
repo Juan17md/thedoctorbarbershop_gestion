@@ -127,5 +127,6 @@ temp/
 *.pid
 *.seed
 createAdmin.js
+resetDatabase.js
 CLAUDE.md
 AGENT.md

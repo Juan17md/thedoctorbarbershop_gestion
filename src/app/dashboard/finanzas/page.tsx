@@ -217,116 +217,133 @@ export default function FinanzasPage() {
       return;
     }
 
-    const totalAmount = service.price;
-    const barberShareAmount = totalAmount * 0.6;
-    const barberiaShareAmount = totalAmount * 0.4;
-    const date = new Date().toISOString().split("T")[0];
+    try {
+      const totalAmount = service.price;
+      const barberShareAmount = totalAmount * 0.6;
+      const barberiaShareAmount = totalAmount * 0.4;
+      const date = new Date().toISOString().split("T")[0];
 
-    // 1. Crear registro financiero
-    await addDoc(collection(db, "finances"), {
-      serviceId: service.id,
-      serviceName: service.name,
-      barberId: finalBarberId,
-      barberName: finalBarber.name,
-      clientName: formData.clientName || "Cliente",
-      totalAmount,
-      barberShare: barberShareAmount,
-      barberiaShare: barberiaShareAmount,
-      date,
-      createdAt: new Date()
-    });
-
-    // 2. Actualizar banco del barbero
-    const barberBankRef = doc(db, "bank", finalBarberId || "");
-    const barberBankDoc = await getDoc(barberBankRef);
-    if (barberBankDoc.exists()) {
-      await updateDoc(barberBankRef, {
-        balance: increment(barberShareAmount),
-        totalEarned: increment(barberShareAmount),
-        lastUpdated: new Date()
+      // 1. Crear registro financiero
+      await addDoc(collection(db, "finances"), {
+        serviceId: service.id,
+        serviceName: service.name,
+        barberId: finalBarberId,
+        barberName: finalBarber.name,
+        clientName: formData.clientName || "Cliente",
+        totalAmount,
+        barberShare: barberShareAmount,
+        barberiaShare: barberiaShareAmount,
+        date,
+        createdAt: new Date()
       });
-    } else {
-      await setDoc(barberBankRef, {
+
+      // 2. Actualizar banco del barbero
+      const barberBankRef = doc(db, "bank", finalBarberId || "");
+      const barberBankDoc = await getDoc(barberBankRef);
+      if (barberBankDoc.exists()) {
+        await updateDoc(barberBankRef, {
+          balance: increment(barberShareAmount),
+          totalEarned: increment(barberShareAmount),
+          lastUpdated: new Date()
+        });
+      } else {
+        await setDoc(barberBankRef, {
+          userId: finalBarberId,
+          userName: finalBarber.name,
+          balance: barberShareAmount,
+          totalEarned: barberShareAmount,
+          totalPaid: 0,
+          lastUpdated: new Date()
+        });
+      }
+
+      // 3. Agregar transacción al historial del banco del barbero
+      await addDoc(collection(db, "bank_transactions"), {
         userId: finalBarberId,
         userName: finalBarber.name,
-        balance: barberShareAmount,
-        totalEarned: barberShareAmount,
-        totalPaid: 0,
-        lastUpdated: new Date()
+        type: "earning",
+        amount: barberShareAmount,
+        description: `Servicio: ${service.name}`,
+        date,
+        createdAt: new Date()
       });
-    }
 
-    // 3. Agregar transacción al historial del banco del barbero
-    await addDoc(collection(db, "bank_transactions"), {
-      userId: finalBarberId,
-      userName: finalBarber.name,
-      type: "earning",
-      amount: barberShareAmount,
-      description: `Servicio: ${service.name}`,
-      date,
-      createdAt: new Date()
-    });
+      // 4. Actualizar banco de la barbería (admin/barbershop)
+      const barberiaBankRef = doc(db, "bank", "barbershop");
+      const barberiaBankDoc = await getDoc(barberiaBankRef);
+      if (barberiaBankDoc.exists()) {
+        await updateDoc(barberiaBankRef, {
+          balance: increment(barberiaShareAmount),
+          totalEarned: increment(barberiaShareAmount),
+          lastUpdated: new Date()
+        });
+      } else {
+        await setDoc(barberiaBankRef, {
+          userId: "barbershop",
+          userName: "The Doctor Barber Shop",
+          balance: barberiaShareAmount,
+          totalEarned: barberiaShareAmount,
+          totalPaid: 0,
+          lastUpdated: new Date()
+        });
+      }
 
-    // 4. Actualizar banco de la barbería (admin)
-    const barberiaBankRef = doc(db, "bank", "barbershop");
-    const barberiaBankDoc = await getDoc(barberiaBankRef);
-    if (barberiaBankDoc.exists()) {
-      await updateDoc(barberiaBankRef, {
-        balance: increment(barberiaShareAmount),
-        totalEarned: increment(barberiaShareAmount),
-        lastUpdated: new Date()
-      });
-    } else {
-      await setDoc(barberiaBankRef, {
+      // 5. Agregar transacción al historial de la barbería
+      await addDoc(collection(db, "bank_transactions"), {
         userId: "barbershop",
         userName: "The Doctor Barber Shop",
-        balance: barberiaShareAmount,
-        totalEarned: barberiaShareAmount,
-        totalPaid: 0,
-        lastUpdated: new Date()
+        type: "earning",
+        amount: barberiaShareAmount,
+        description: `Servicio: ${service.name} (${finalBarber.name})`,
+        date,
+        createdAt: new Date()
       });
-    }
 
-    // 5. Agregar transacción al historial de la barbería
-    await addDoc(collection(db, "bank_transactions"), {
-      userId: "barbershop",
-      userName: "The Doctor Barber Shop",
-      type: "earning",
-      amount: barberiaShareAmount,
-      description: `Servicio: ${service.name} (${finalBarber.name})`,
-      date,
-      createdAt: new Date()
-    });
-
-    // 6. Actualizar objetivos automáticamente
-    const objectivesQuery = query(collection(db, "objectives"));
-    const objectivesSnapshot = await getDocs(objectivesQuery);
-    const now = new Date();
-    
-    for (const objDoc of objectivesSnapshot.docs) {
-      const objData = objDoc.data();
-      const endDate = objData.endDate?.toDate();
-      
-      // Solo actualizar si el objetivo está vigente
-      if (endDate && endDate >= now) {
-        const isBarberObjective = objData.barberoId && objData.barberoId === finalBarberId;
-        const isGeneralObjective = !objData.barberoId;
-        
-        if (isBarberObjective || isGeneralObjective) {
-          const currentAmount = objData.currentAmount || 0;
-          const newAmount = isBarberObjective 
-            ? currentAmount + barberShareAmount 
-            : currentAmount + totalAmount;
-          
-          await updateDoc(doc(db, "objectives", objDoc.id), {
-            currentAmount: newAmount
-          });
+      // 6. Actualizar objetivos automáticamente
+      try {
+        let objectivesQuery;
+        if (isAdmin) {
+          objectivesQuery = query(collection(db, "objectives"));
+        } else {
+          objectivesQuery = query(collection(db, "objectives"), where("barberoId", "==", finalBarberId));
         }
+        
+        const objectivesSnapshot = await getDocs(objectivesQuery);
+        const now = new Date();
+        
+        for (const objDoc of objectivesSnapshot.docs) {
+          const objData = objDoc.data();
+          const endDate = objData.endDate?.toDate();
+          
+          // Solo actualizar si el objetivo está vigente
+          if (endDate && endDate >= now) {
+            const isBarberObjective = objData.barberoId && objData.barberoId === finalBarberId;
+            const isGeneralObjective = !objData.barberoId;
+            
+            if (isBarberObjective || isGeneralObjective) {
+              const currentAmount = objData.currentAmount || 0;
+              const newAmount = isBarberObjective 
+                ? currentAmount + barberShareAmount 
+                : currentAmount + totalAmount;
+              
+              await updateDoc(doc(db, "objectives", objDoc.id), {
+                currentAmount: newAmount
+              });
+            }
+          }
+        }
+      } catch (objError) {
+        console.error("Error al actualizar objetivos:", objError);
       }
-    }
 
-    setIsModalOpen(false);
-    setFormData({ serviceId: "", clientName: "", barberId: "" });
+    } catch (error) {
+      console.error("Error al registrar el servicio:", error);
+      alert("Hubo un error al registrar el servicio. Por favor intenta nuevamente.");
+    } finally {
+      // Siempre cerrar el modal y limpiar el form al final, incluso si hay error
+      setIsModalOpen(false);
+      setFormData({ serviceId: "", clientName: "", barberId: "" });
+    }
   };
 
   const revenueByService = filteredRecords.reduce((acc, r) => {
