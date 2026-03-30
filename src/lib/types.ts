@@ -6,6 +6,8 @@ export interface User {
   createdAt: Date;
 }
 
+export type UserRole = 'admin' | 'barber';
+
 export interface Service {
   id: string;
   name: string;
@@ -24,26 +26,34 @@ export interface Client {
   createdBy: string; // uid del barbero/admin
 }
 
+export type CategoriaInventario = "equipos" | "materiales";
+
+export type EstadoEquipo = "nuevo" | "regular" | "malo";
+
 export interface InventoryItem {
   id: string;
   name: string;
-  quantity: number;
-  minQuantity: number; // umbral para alerta de stock bajo
-  unit: string;
+  quantity?: number;
+  minQuantity?: number; // umbral para alerta de stock bajo
   price: number;
+  estado?: EstadoEquipo;
   addedAt: Date;
   addedBy: string;
+  categoria?: CategoriaInventario; // legacy docs pueden no tenerla
+  unit?: string; // legacy field kept for backward compat
 }
 
 export interface Objective {
   id: string;
-  type: 'weekly' | 'monthly';
+  name: string;
   targetAmount: number;
   currentAmount: number;
-  barberoId?: string; // null = objetivo de la barbería
-  startDate: Date;
   endDate: Date;
   createdAt: Date;
+  // legacy fields (kept for backward compat with existing docs)
+  type?: 'weekly' | 'monthly';
+  barberoId?: string;
+  startDate?: Date;
 }
 
 export interface Appointment {
@@ -59,6 +69,43 @@ export interface Appointment {
   status: 'pending' | 'completed' | 'cancelled';
   totalPrice: number;
   createdAt: Date;
+}
+
+export type ReservaEstado = 'pendiente' | 'confirmada' | 'completada' | 'cancelada';
+
+export interface Reserva {
+  id: string;
+  barberId: string;
+  barberName: string;
+  serviceId: string;
+  serviceName: string;
+  fecha: string;
+  hora: string;
+  clienteNombre: string;
+  clienteTelefono: string;
+  estado: ReservaEstado;
+  notas?: string;
+  creadoAt: string;
+  actualizadoAt: string;
+  creadoPorUid: string;
+  creadoPorRol: UserRole;
+  barbero?: string;
+  servicio?: string;
+  cliente_nombre?: string;
+  cliente_telefono?: string;
+}
+
+export interface ReservaPayload {
+  barberId: string;
+  barberName: string;
+  serviceId: string;
+  serviceName: string;
+  fecha: string;
+  hora: string;
+  clienteNombre: string;
+  clienteTelefono: string;
+  estado: ReservaEstado;
+  notas?: string;
 }
 
 export interface FinancialRecord {

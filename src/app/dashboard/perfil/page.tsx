@@ -17,13 +17,15 @@ import {
   updateDoc,
   deleteDoc
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { User, Mail, Lock, Save, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, Check, Trash2, Pencil, Scissors, Shield, Users } from "lucide-react";
+import { db, auth } from "@/lib/firebase";
+import { User, Mail, Lock, Save, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, Check, Trash2, Pencil, Scissors, Shield, Users, Phone, Loader2 } from "lucide-react";
+import { Select } from "@/components/ui";
 
 interface BarberUser {
   uid: string;
   email: string;
   name: string;
+  phone?: string;
   role: "admin" | "barber";
   createdAt?: Date;
 }
@@ -32,7 +34,7 @@ export default function PerfilPage() {
   const { userRole } = useAuth();
   const isAdmin = userRole?.role === "admin";
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -40,14 +42,19 @@ export default function PerfilPage() {
   const [withdrawAmount, setWithdrawAmount] = useState(0);
   const [barbers, setBarbers] = useState<BarberUser[]>([]);
   const [isNewBarberModalOpen, setIsNewBarberModalOpen] = useState(false);
-  const [newBarberData, setNewBarberData] = useState({ email: "", password: "", name: "", role: "barber" });
+  const [editingBarberId, setEditingBarberId] = useState<string | null>(null);
+  const [deletingBarberId, setDeletingBarberId] = useState<string | null>(null);
+  const [newBarberData, setNewBarberData] = useState({ email: "", password: "", name: "", phone: "", role: "barber" });
+  const [guardando, setGuardando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
 
   useEffect(() => {
     if (userRole) {
       const timer = setTimeout(() => {
         setFormData(prev => {
-          if (prev.name === userRole.name && prev.email === userRole.email) return prev;
-          return { name: userRole.name, email: userRole.email };
+          if (prev.name === userRole.name && prev.email === userRole.email && prev.phone === (userRole.phone || "")) return prev;
+          return { name: userRole.name, email: userRole.email, phone: userRole.phone || "" };
         });
       }, 0);
       return () => clearTimeout(timer);
@@ -63,7 +70,7 @@ export default function PerfilPage() {
         setBankAccount({
           id: docSnap.id,
           ...docSnap.data(),
-          lastUpdated: docSnap.data().lastUpdated?.toDate()
+          lastUpdated: docSnap.data().lastUpdated?.toDate ? docSnap.data().lastUpdated.toDate() : docSnap.data().lastUpdated ? new Date(docSnap.data().lastUpdated) : undefined
         } as BankAccount);
       } else {
         setBankAccount(null);
@@ -79,7 +86,7 @@ export default function PerfilPage() {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate()
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt ? new Date(doc.data().createdAt) : undefined
       })) as BankTransaction[];
       setTransactions(data);
     });
@@ -99,7 +106,7 @@ export default function PerfilPage() {
       const data = snapshot.docs.map(doc => ({
         uid: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate()
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt ? new Date(doc.data().createdAt) : undefined
       })) as BarberUser[];
       setBarbers(data);
     });
@@ -110,7 +117,8 @@ export default function PerfilPage() {
     if (!userRole?.uid) return;
     try {
       await updateDoc(doc(db, "users", userRole.uid), {
-        name: formData.name
+        name: formData.name,
+        phone: formData.phone
       });
       setIsEditing(false);
       alert("Perfil actualizado");
@@ -151,28 +159,118 @@ export default function PerfilPage() {
     }
   };
 
-  const handleDeleteBarber = async (uid: string) => {
-    if (!confirm("¿Eliminar este usuario?")) return;
+  const handleDeleteBarber = (uid: string) => {
+    setDeletingBarberId(uid);
+  };
+
+  const confirmDeleteBarber = async () => {
+    if (!deletingBarberId || !auth.currentUser) return;
+    setEliminando(true);
     try {
-      await deleteDoc(doc(db, "users", uid));
+      const token = await auth.currentUser.getIdToken();
+      const respuesta = await fetch("/api/barbers", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ uid: deletingBarberId })
+      });
+      const datos = await respuesta.json();
+      if (!respuesta.ok) {
+        alert(datos.error || "Error al eliminar el usuario");
+        return;
+      }
+      setDeletingBarberId(null);
     } catch (error) {
       console.error("Error eliminando usuario:", error);
+      alert("Error al eliminar el usuario");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const handleEditBarber = (barber: BarberUser) => {
+    setNewBarberData({ 
+      email: barber.email, 
+      password: "", 
+      name: barber.name, 
+      phone: barber.phone || "", 
+      role: barber.role 
+    });
+    setEditingBarberId(barber.uid);
+    setIsNewBarberModalOpen(true);
+  };
+
+  const handleSaveBarber = async () => {
+    if (!newBarberData.name || !newBarberData.email) {
+      setErrorMensaje("Nombre y email son obligatorios");
+      return;
+    }
+    if (!editingBarberId && !newBarberData.password) {
+      setErrorMensaje("La contraseña es obligatoria para nuevos usuarios");
+      return;
+    }
+    if (!editingBarberId && newBarberData.password.length < 6) {
+      setErrorMensaje("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    setGuardando(true);
+    setErrorMensaje(null);
+
+    try {
+      if (editingBarberId) {
+        await updateDoc(doc(db, "users", editingBarberId), {
+          name: newBarberData.name,
+          phone: newBarberData.phone,
+          role: newBarberData.role
+        });
+      } else {
+        if (!auth.currentUser) {
+          setErrorMensaje("No se pudo autenticar. Recarga la página.");
+          return;
+        }
+        const token = await auth.currentUser.getIdToken();
+        const respuesta = await fetch("/api/barbers", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            email: newBarberData.email,
+            password: newBarberData.password,
+            name: newBarberData.name,
+            phone: newBarberData.phone,
+            role: newBarberData.role
+          })
+        });
+        const datos = await respuesta.json();
+        if (!respuesta.ok) {
+          setErrorMensaje(datos.error || "Error al crear el usuario");
+          return;
+        }
+      }
+      setIsNewBarberModalOpen(false);
+      setEditingBarberId(null);
+      setNewBarberData({ email: "", password: "", name: "", phone: "", role: "barber" });
+      setErrorMensaje(null);
+    } catch (error) {
+      console.error("Error guardando barbero:", error);
+      setErrorMensaje("Error inesperado al guardar");
+    } finally {
+      setGuardando(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-white tracking-wide">Perfil</h1>
-          <p className="text-text-secondary mt-1">
-            {isAdmin ? "Gestiona tu información y usuarios" : "Gestiona tu información personal y finanzas"}
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="btn-surgical"
+            className="btn-primary"
           >
             Editar Perfil
           </button>
@@ -180,10 +278,10 @@ export default function PerfilPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-8">
+        <div className="card-premium p-8">
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-20 h-20 rounded-full bg-surgical-red/20 flex items-center justify-center">
-              <User size={40} className="text-surgical-red" />
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+              <User size={40} className="text-primary" />
             </div>
             <div>
               <h2 className="font-display text-2xl text-white">{userRole?.name}</h2>
@@ -198,7 +296,7 @@ export default function PerfilPage() {
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
                   type="text"
-                  className="input-surgical bg-surface pl-12 w-full"
+                  className="input-premium bg-surface pl-12 w-full"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={!isEditing}
@@ -212,9 +310,24 @@ export default function PerfilPage() {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
                   type="email"
-                  className="input-surgical bg-surface pl-12 w-full"
+                  className="input-premium bg-surface pl-12 w-full"
                   value={formData.email}
                   disabled
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Teléfono</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                <input 
+                  type="tel"
+                  className="input-premium bg-surface pl-12 w-full"
+                  placeholder="+58 412 1234567"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -225,7 +338,7 @@ export default function PerfilPage() {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
                   type="password"
-                  className="input-surgical bg-surface pl-12 w-full"
+                  className="input-premium bg-surface pl-12 w-full"
                   placeholder="••••••••"
                   value={passwordData.new}
                   onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
@@ -236,14 +349,14 @@ export default function PerfilPage() {
             {isEditing && (
               <div className="flex gap-4 mt-6">
                 <button 
-                  onClick={() => { setIsEditing(false); setFormData({ name: userRole?.name || "", email: userRole?.email || "" }); }}
-                  className="flex-1 px-4 py-3 rounded-xl border border-outline text-text-secondary hover:bg-surface-high transition-colors"
+                  onClick={() => { setIsEditing(false); setFormData({ name: userRole?.name || "", email: userRole?.email || "", phone: userRole?.phone || "" }); }}
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-text-secondary hover:bg-surface-high transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={handleSaveProfile}
-                  className="flex-1 btn-surgical flex items-center justify-center gap-2"
+                  className="flex-1 btn-primary flex items-center justify-center gap-2"
                 >
                   <Save size={18} /> Guardar
                 </button>
@@ -254,16 +367,16 @@ export default function PerfilPage() {
 
         {/* Banca / Banco */}
         {!isAdmin && (
-          <div className="glass-card p-8">
+          <div className="card-premium p-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-display text-xl text-white flex items-center gap-2">
-                <Wallet size={20} className="text-surgical-red" />
+                <Wallet size={20} className="text-primary" />
                 Tu Banca
               </h3>
               <button 
                 onClick={() => setIsWithdrawModalOpen(true)}
                 disabled={!bankAccount || bankAccount.balance <= 0}
-                className="btn-surgical text-sm disabled:opacity-50"
+                className="btn-primary text-sm disabled:opacity-50"
               >
                 Retirar
               </button>
@@ -324,15 +437,15 @@ export default function PerfilPage() {
 
       {/* Gestión de Barberos (Admin) */}
       {isAdmin && (
-        <div className="glass-card p-8">
+        <div className="card-premium p-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-display text-xl text-white flex items-center gap-2">
-              <Users size={20} className="text-surgical-red" />
+              <Users size={20} className="text-primary" />
               Gestión de Barberos
             </h3>
             <button 
-              onClick={() => setIsNewBarberModalOpen(true)}
-              className="btn-surgical flex items-center gap-2"
+              onClick={() => { setEditingBarberId(null); setNewBarberData({ email: "", password: "", name: "", phone: "", role: "barber" }); setIsNewBarberModalOpen(true); }}
+              className="btn-primary flex items-center gap-2"
             >
               <Plus size={18} /> Nuevo Barbero
             </button>
@@ -343,20 +456,26 @@ export default function PerfilPage() {
               <div key={barber.uid} className="bg-surface-high/50 p-4 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-surgical-red/20 flex items-center justify-center">
-                      <User size={18} className="text-surgical-red" />
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User size={18} className="text-primary" />
                     </div>
                     <div>
                       <p className="font-medium text-white">{barber.name}</p>
                       <p className="text-text-muted text-xs">{barber.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {barber.role === "admin" ? (
-                      <Shield size={16} className="text-surgical-red" />
+                      <Shield size={16} className="text-primary" />
                     ) : (
                       <Scissors size={16} className="text-text-muted" />
                     )}
+                    <button 
+                      onClick={() => handleEditBarber(barber)}
+                      className="p-2 text-text-muted hover:text-primary transition-colors"
+                    >
+                      <Pencil size={16} />
+                    </button>
                     <button 
                       onClick={() => handleDeleteBarber(barber.uid)}
                       className="p-2 text-text-muted hover:text-red-500 transition-colors"
@@ -366,7 +485,7 @@ export default function PerfilPage() {
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-white/5">
-                  <span className={`text-xs px-2 py-1 rounded ${barber.role === "admin" ? "bg-surgical-red/20 text-surgical-red" : "bg-blue-500/20 text-blue-400"}`}>
+                  <span className={`text-xs px-2 py-1 rounded ${barber.role === "admin" ? "bg-primary/20 text-primary" : "bg-blue-500/20 text-blue-400"}`}>
                     {barber.role === "admin" ? "Administrador" : "Barbero"}
                   </span>
                 </div>
@@ -384,36 +503,36 @@ export default function PerfilPage() {
 
       {/* Modal de retiro */}
       {isWithdrawModalOpen && (
-        <div className="fixed inset-0 bg-void/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card p-8 w-full max-w-md">
-            <h2 className="font-display text-2xl text-white mb-6">Retirar Ganancias</h2>
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+            <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Retirar Ganancias</h2>
             <div className="mb-6">
-              <p className="text-text-secondary text-sm mb-2">Balance disponible</p>
-              <p className="font-display text-2xl text-white">${bankAccount?.balance.toFixed(2)}</p>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Balance disponible</p>
+              <p className="font-display text-4xl text-white">${bankAccount?.balance.toFixed(2)}</p>
             </div>
             <div>
-              <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Monto a retirar</label>
+              <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Monto a retirar</label>
               <input 
                 type="number"
-                className="input-surgical bg-transparent w-full"
+                className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none font-display tracking-widest"
                 placeholder="0.00"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(Number(e.target.value))}
               />
             </div>
-            <div className="flex gap-4 mt-6">
+            <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
               <button 
                 type="button" 
                 onClick={() => setIsWithdrawModalOpen(false)}
-                className="flex-1 px-4 py-3 rounded-xl border border-outline text-text-secondary hover:bg-surface-high transition-colors"
+                className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleWithdraw}
-                className="flex-1 btn-surgical flex items-center justify-center gap-2"
+                className="flex-1 btn-primary"
               >
-                <Check size={18} /> Confirmar Retiro
+                CONFIRMAR RETIRO
               </button>
             </div>
           </div>
@@ -422,65 +541,124 @@ export default function PerfilPage() {
 
       {/* Modal de nuevo barbero */}
       {isNewBarberModalOpen && (
-        <div className="fixed inset-0 bg-void/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card p-8 w-full max-w-md">
-            <h2 className="font-display text-2xl text-white mb-6">Nuevo Barbero</h2>
-            <p className="text-text-secondary text-sm mb-4">
-              Para crear un nuevo usuario, primero crea el usuario en Firebase Authentication y luego completa su perfil aquí.
-            </p>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+            <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">{editingBarberId ? "Editar Usuario" : "Nuevo Barbero"}</h2>
+            <div className="space-y-6">
               <div>
-                <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Nombre</label>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Nombre</label>
                 <input 
                   type="text"
-                  className="input-surgical bg-transparent w-full"
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none"
                   placeholder="Nombre del barbero"
                   value={newBarberData.name}
                   onChange={(e) => setNewBarberData({ ...newBarberData, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Email</label>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Email</label>
                 <input 
                   type="email"
-                  className="input-surgical bg-transparent w-full"
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="email@ejemplo.com"
                   value={newBarberData.email}
                   onChange={(e) => setNewBarberData({ ...newBarberData, email: e.target.value })}
+                  disabled={!!editingBarberId}
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Rol</label>
-                <select 
-                  className="input-surgical bg-transparent w-full"
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Teléfono</label>
+                <input 
+                  type="tel"
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none"
+                  placeholder="+58 412 1234567"
+                  value={newBarberData.phone}
+                  onChange={(e) => setNewBarberData({ ...newBarberData, phone: e.target.value })}
+                />
+              </div>
+              {!editingBarberId && (
+                <div>
+                  <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Contraseña</label>
+                  <input 
+                    type="password"
+                    className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none"
+                    placeholder="Mínimo 6 caracteres"
+                    value={newBarberData.password}
+                    onChange={(e) => setNewBarberData({ ...newBarberData, password: e.target.value })}
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Rol</label>
+                <Select
+                  options={[
+                    { value: "barber", label: "Barbero" },
+                    { value: "admin", label: "Administrador" }
+                  ]}
                   value={newBarberData.role}
-                  onChange={(e) => setNewBarberData({ ...newBarberData, role: e.target.value })}
-                >
-                  <option value="barber">Barbero</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  onChange={(val) => setNewBarberData({ ...newBarberData, role: val })}
+                  placeholder="Seleccionar rol..."
+                  className="bg-void/50 border-white/10 rounded-md"
+                />
               </div>
             </div>
-            <div className="flex gap-4 mt-6">
+
+            {errorMensaje && (
+              <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {errorMensaje}
+              </div>
+            )}
+
+            <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
               <button 
                 type="button" 
-                onClick={() => setIsNewBarberModalOpen(false)}
-                className="flex-1 px-4 py-3 rounded-xl border border-outline text-text-secondary hover:bg-surface-high transition-colors"
+                onClick={() => { setIsNewBarberModalOpen(false); setErrorMensaje(null); }}
+                className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
+                disabled={guardando}
               >
                 Cancelar
               </button>
               <button 
-                onClick={async () => {
-                  if (!newBarberData.name || !newBarberData.email) {
-                    alert("Completa todos los campos");
-                    return;
-                  }
-                  alert("Para crear usuarios, usa Firebase Console o implementa registro con email/password");
-                  setIsNewBarberModalOpen(false);
-                }}
-                className="flex-1 btn-surgical flex items-center justify-center gap-2"
+                onClick={handleSaveBarber}
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+                disabled={guardando}
               >
-                <Check size={18} /> Guardar
+                {guardando ? (
+                  <><Loader2 size={16} className="animate-spin" /> Procesando...</>
+                ) : (
+                  editingBarberId ? "GUARDAR" : "CREAR"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingBarberId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-sm">
+          <div className="card-premium w-full max-w-sm p-8 relative flex flex-col items-center text-center border-t-2 border-t-red-500 border-red-500/20 shadow-[0_0_40px_rgba(239,68,68,0.1)]">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-6 text-red-500 border border-red-500/20">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="font-display text-2xl mb-2 text-white tracking-wider">¿ELIMINAR <span className="text-red-500">USUARIO</span>?</h3>
+            <p className="text-text-muted text-sm mb-8 font-body">Esta acción no se puede deshacer y el usuario perderá acceso permanentemente.</p>
+            <div className="flex gap-3 w-full">
+              <button 
+                onClick={() => setDeletingBarberId(null)}
+                className="flex-1 py-3 rounded-xl border border-white/10 text-text-muted hover:bg-surface-high hover:text-white transition-all font-bold text-xs tracking-widest uppercase"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmDeleteBarber}
+                className="flex-1 py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 hover:border-red-500 hover:shadow-red-glow font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2"
+                disabled={eliminando}
+              >
+                {eliminando ? (
+                  <><Loader2 size={14} className="animate-spin" /> Eliminando...</>
+                ) : (
+                  "Eliminar"
+                )}
               </button>
             </div>
           </div>

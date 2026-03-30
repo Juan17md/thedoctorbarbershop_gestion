@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { type FinancialRecord } from "@/lib/types";
 import { 
@@ -11,7 +12,8 @@ import {
   where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, Users, Scissors, TrendingUp, Activity, CalendarCheck, Wallet, Target } from "lucide-react";
+import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History } from "lucide-react";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
@@ -89,16 +91,7 @@ export default function DashboardPage() {
 
     return (
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-urban-header text-text-primary">
-              RESUMEN DE <span className="text-primary">OPERACIONES</span>
-            </h1>
-            <p className="text-text-muted mt-2 text-sm">
-              Bienvenido, {userRole?.name}. Aquí está el overview de la barbería.
-            </p>
-          </div>
-        </div>
+        
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
           {stats.map((stat, i) => {
@@ -119,28 +112,70 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <div className="card-premium p-6">
             <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
               <Wallet size={22} className="text-primary" />
-              DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span> <span className="text-text-muted text-sm ml-2 font-body font-normal opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>
+              DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>
             </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-surface-high/50 p-4 rounded-lg border border-border-subtle">
-                <p className="text-text-secondary text-sm">Para Barberos (60%)</p>
-                <p className="font-display text-2xl text-emerald-400">${barberDaily.toFixed(2)}</p>
-              </div>
-              <div className="bg-surface-high/50 p-4 rounded-lg border border-border-subtle">
-                <p className="text-text-secondary text-sm">Para Barbería (40%)</p>
-                <p className="font-display text-2xl text-blue-400">${barberiaDaily.toFixed(2)}</p>
-              </div>
-            </div>
+            {(() => {
+              const earningsByBarber = todayRecords.reduce((acc, r) => {
+                if (!acc[r.barberName]) acc[r.barberName] = { share: 0, barberiaShare: 0, generated: 0, services: 0 };
+                acc[r.barberName].share += r.barberShare;
+                acc[r.barberName].barberiaShare += r.barberiaShare;
+                acc[r.barberName].generated += r.totalAmount;
+                acc[r.barberName].services += 1;
+                return acc;
+              }, {} as Record<string, { share: number; barberiaShare: number; generated: number; services: number }>);
+              const barberEntries = Object.entries(earningsByBarber);
+              const gridCols = "grid-cols-1";
+              return (
+                <div className={`grid ${gridCols} gap-4`}>
+                  {barberEntries.map(([name, data]) => (
+                    <div key={name} className="bg-surface-high/50 p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
+                          <Scissors size={18} className="text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium text-lg leading-tight uppercase tracking-wider font-display">{name}</p>
+                          <p className="text-text-muted text-[10px] uppercase tracking-wider">{data.services} servicio{data.services !== 1 ? "s" : ""}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3 flex-1 mb-5">
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                          <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbero <span className="text-text-muted/50 font-normal">(60%)</span></span>
+                          <span className="font-display text-xl text-emerald-400">${data.share.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                          <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbería <span className="text-text-muted/50 font-normal">(40%)</span></span>
+                          <span className="font-display text-xl text-blue-400">${data.barberiaShare.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-auto flex justify-between items-center bg-void/40 p-3 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
+                        <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <span className="text-white text-[10px] uppercase tracking-[0.2em] font-bold relative z-10">Total Generado</span>
+                        <span className="font-display text-2xl text-white relative z-10">${data.generated.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {barberEntries.length === 0 && (
+                    <div className="col-span-full flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
+                      <Wallet size={32} className="text-text-muted/30 mb-3" />
+                      <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas hoy</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="card-premium p-6">
             <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
               <Users size={22} className="text-primary" />
-              TOP <span className="text-primary">BARBERO</span> <span className="text-text-muted text-sm ml-2 font-body font-normal opacity-50 tracking-tight lowercase font-medium italic">(Día)</span>
+              TOP <span className="text-primary">BARBERO</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Día)</span>
             </h3>
             {topBarber ? (
               <div className="flex items-center gap-4">
@@ -161,35 +196,35 @@ export default function DashboardPage() {
         <div className="card-premium p-6">
           <h3 className="font-display text-2xl text-text-primary mb-6 tracking-[0.05em] uppercase">SERVICIOS <span className="text-primary">RECIENTES</span></h3>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border-subtle">
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Fecha</th>
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Barbero</th>
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Servicio</th>
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Cliente</th>
-                  <th className="text-right py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Total</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Barbero</TableHead>
+                  <TableHead>Servicio</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead align="right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {todayRecords.slice(0, 5).map((r) => (
-                  <tr key={r.id} className="border-b border-border-subtle hover:bg-surface-high/30 transition-colors">
-                    <td className="py-3 px-4 text-text-secondary">{r.date}</td>
-                    <td className="py-3 px-4 text-text-primary">{r.barberName}</td>
-                    <td className="py-3 px-4 text-text-secondary">{r.serviceName}</td>
-                    <td className="py-3 px-4 text-text-secondary">{r.clientName}</td>
-                    <td className="py-3 px-4 text-primary text-right font-display">${r.totalAmount.toFixed(2)}</td>
-                  </tr>
+                  <TableRow key={r.id} className="hover:bg-surface-high/30">
+                    <TableCell className="py-3 text-text-secondary">{r.date}</TableCell>
+                    <TableCell className="py-3 text-text-primary">{r.barberName}</TableCell>
+                    <TableCell className="py-3 text-text-secondary">{r.serviceName}</TableCell>
+                    <TableCell className="py-3 text-text-secondary">{r.clientName}</TableCell>
+                    <TableCell className="py-3 text-primary text-right font-display">${r.totalAmount.toFixed(2)}</TableCell>
+                  </TableRow>
                 ))}
                 {todayRecords.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-text-muted">
+                  <TableRow className="hover:bg-transparent border-0">
+                    <TableCell colSpan={5} className="py-8 text-center text-text-muted">
                       No hay servicios registrados hoy
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>
@@ -197,6 +232,69 @@ export default function DashboardPage() {
   }
 
   // Vista de Barbero
+  const accionesRapidas = [
+    {
+      label: "Registrar Servicio",
+      descripcion: "Agrega un nuevo servicio al registro",
+      href: "/dashboard/finanzas",
+      icon: DollarSign,
+      colorIcono: "text-emerald-400",
+      bgIcono: "bg-emerald-400/10",
+      bordeIcono: "border-emerald-400/20",
+      hoverCard: "hover:border-emerald-400/30 hover:bg-emerald-400/5",
+    },
+    {
+      label: "Mis Reservas",
+      descripcion: "Consulta tus citas agendadas",
+      href: "/dashboard/reservas",
+      icon: CalendarDays,
+      colorIcono: "text-blue-400",
+      bgIcono: "bg-blue-400/10",
+      bordeIcono: "border-blue-400/20",
+      hoverCard: "hover:border-blue-400/30 hover:bg-blue-400/5",
+    },
+    {
+      label: "Servicios",
+      descripcion: "Catálogo de servicios disponibles",
+      href: "/dashboard/servicios",
+      icon: Scissors,
+      colorIcono: "text-primary",
+      bgIcono: "bg-primary/10",
+      bordeIcono: "border-primary/20",
+      hoverCard: "hover:border-primary/30 hover:bg-primary/5",
+    },
+    {
+      label: "Estadísticas",
+      descripcion: "Revisa tu rendimiento y métricas",
+      href: "/dashboard/estadisticas",
+      icon: BarChart3,
+      colorIcono: "text-purple-400",
+      bgIcono: "bg-purple-400/10",
+      bordeIcono: "border-purple-400/20",
+      hoverCard: "hover:border-purple-400/30 hover:bg-purple-400/5",
+    },
+    {
+      label: "Mis Objetivos",
+      descripcion: "Sigue el avance de tus metas",
+      href: "/dashboard/objetivos",
+      icon: Target,
+      colorIcono: "text-amber-400",
+      bgIcono: "bg-amber-400/10",
+      bordeIcono: "border-amber-400/20",
+      hoverCard: "hover:border-amber-400/30 hover:bg-amber-400/5",
+    },
+    {
+      label: "Mi Historial",
+      descripcion: "Consulta todos tus servicios registrados",
+      href: "/dashboard/historial",
+      icon: History,
+      colorIcono: "text-rose-400",
+      bgIcono: "bg-rose-400/10",
+      bordeIcono: "border-rose-400/20",
+      hoverCard: "hover:border-rose-400/30 hover:bg-rose-400/5",
+    },
+  ];
+
   const stats = [
     { name: "Tus Ingresos Hoy", value: `$${barberDaily.toFixed(2)}`, icon: DollarSign, color: "text-emerald-400" },
     { name: "Tus Ingresos Semana", value: `$${weekRecords.reduce((s, r) => s + r.barberShare, 0).toFixed(2)}`, icon: TrendingUp, color: "text-blue-400" },
@@ -206,22 +304,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-urban-header text-text-primary">
-            HOLA, <span className="text-primary">{userRole?.name?.toUpperCase()}</span>
-          </h1>
-          <p className="text-text-muted mt-2 text-sm">
-            Este es tu resumen de ganancias y rendimiento.
-          </p>
-        </div>
-      </div>
+      
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={i} className="card-premium p-6 hover:border-primary/30 transition-all duration-300">
+            <div key={i} className="card-premium p-6 hover:border-primary/30 transition-all duration-300 group">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 rounded-lg bg-surface-high flex items-center justify-center border border-border-subtle">
                   <Icon size={20} className={stat.color} />
@@ -236,36 +325,115 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="card-premium p-6">
-        <h3 className="font-display text-xl text-text-primary mb-4">Tus Servicios de Hoy</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border-subtle">
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Hora</th>
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Servicio</th>
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Cliente</th>
-                <th className="text-right py-3 px-4 text-xs text-text-muted uppercase tracking-wider">Tu Parte (60%)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {todayRecords.map((r) => (
-                <tr key={r.id} className="border-b border-border-subtle hover:bg-surface-high/30 transition-colors">
-                  <td className="py-3 px-4 text-text-secondary">{r.date}</td>
-                  <td className="py-3 px-4 text-text-primary">{r.serviceName}</td>
-                  <td className="py-3 px-4 text-text-secondary">{r.clientName}</td>
-                  <td className="py-3 px-4 text-emerald-400 text-right font-display">${r.barberShare.toFixed(2)}</td>
-                </tr>
-              ))}
-              {todayRecords.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-text-muted">
-                    No has registrado servicios hoy
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Acciones Rápidas */}
+      <div className="space-y-4">
+        <p className="font-display text-[10px] uppercase tracking-[0.3em] text-text-muted font-bold px-1">
+          Acciones Rápidas
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {accionesRapidas.map((accion) => {
+            const Icono = accion.icon;
+            return (
+              <Link
+                key={accion.href}
+                href={accion.href}
+                className={`group card-premium p-5 flex items-center gap-4 transition-all duration-300 border border-border-subtle ${accion.hoverCard}`}
+              >
+                <div className={`w-12 h-12 rounded-xl ${accion.bgIcono} border ${accion.bordeIcono} flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110`}>
+                  <Icono size={22} className={accion.colorIcono} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-sm font-bold text-text-primary uppercase tracking-widest leading-tight">{accion.label}</p>
+                  <p className="text-text-muted text-[11px] mt-1 leading-snug">{accion.descripcion}</p>
+                </div>
+                <ArrowRight size={16} className="text-text-muted group-hover:text-text-primary group-hover:translate-x-1 transition-all duration-300 flex-shrink-0" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <div className="card-premium p-6">
+          <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
+            <Wallet size={22} className="text-primary" />
+            DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span>
+            <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>
+          </h3>
+          {todayRecords.length > 0 ? (
+            <div className="bg-surface-high/50 p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 group w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px] gap-6 items-stretch">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
+                    <Scissors size={18} className="text-primary" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display text-3xl text-white leading-none">
+                      {todayServices}
+                    </span>
+                    <p className="text-text-secondary text-[11px] sm:text-xs uppercase tracking-[0.16em] font-semibold leading-none">
+                      servicio{todayServices !== 1 ? "s" : ""} hoy
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center border border-white/5 rounded-lg bg-void/20 px-4 py-4">
+                    <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Tu Parte <span className="text-text-muted/50 font-normal">(60%)</span></span>
+                    <span className="font-display text-2xl text-emerald-400">${barberDaily.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border border-white/5 rounded-lg bg-void/20 px-4 py-4">
+                    <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbería <span className="text-text-muted/50 font-normal">(40%)</span></span>
+                    <span className="font-display text-2xl text-blue-400">${barberiaDaily.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-auto flex justify-between items-center bg-void/40 p-4 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
+                  <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <span className="text-white text-[10px] uppercase tracking-[0.2em] font-bold relative z-10">Total Generado</span>
+                  <span className="font-display text-3xl text-white relative z-10">${dailyRevenue.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
+              <Wallet size={32} className="text-text-muted/30 mb-3" />
+              <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas hoy</p>
+            </div>
+          )}
+        </div>
+
+        <div className="card-premium p-6">
+          <h3 className="font-display text-xl text-text-primary mb-4">Tus Servicios de Hoy</h3>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Servicio</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead align="right">Tu Parte (60%)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {todayRecords.map((r) => (
+                  <TableRow key={r.id} className="hover:bg-surface-high/30">
+                    <TableCell className="py-3 text-text-secondary">{r.date}</TableCell>
+                    <TableCell className="py-3 text-text-primary">{r.serviceName}</TableCell>
+                    <TableCell className="py-3 text-text-secondary">{r.clientName}</TableCell>
+                    <TableCell className="py-3 text-emerald-400 text-right font-display">${r.barberShare.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+                {todayRecords.length === 0 && (
+                  <TableRow className="hover:bg-transparent border-0">
+                    <TableCell colSpan={4} className="py-8 text-center text-text-muted">
+                      No has registrado servicios hoy
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
     </div>

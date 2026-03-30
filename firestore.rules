@@ -33,8 +33,8 @@ service cloud.firestore {
     // Servicios
     match /services/{serviceId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow create: if isAdmin();
+      allow write: if isBarber();
+      allow create: if isBarber();
     }
     
     // Clientes
@@ -79,18 +79,31 @@ service cloud.firestore {
       allow create: if isAdmin() || isBarber();
     }
 
+    // Banco (Billeteras de Barberos y Barbería)
+    match /bank/{bankId} {
+      // Barberos necesitan leer/actualizar el banco de la barbería al registrar servicios
+      allow read: if isOwner(bankId) || isAdmin() || (isBarber() && bankId == "barbershop");
+      allow write: if isOwner(bankId) || isAdmin() || (isBarber() && bankId == "barbershop");
+    }
+
     // Transacciones Bancarias
     match /bank_transactions/{registroId} {
       allow read: if isAuthenticated();
+      // Barberos crean transacciones tanto para sí mismos como para la barbería ("barbershop")
+      allow create: if isAdmin() || isBarber() || (isAuthenticated() && request.resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
-      allow create: if isAdmin();
     }
 
     // Objetivos
     match /objectives/{objId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow create: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.barberoId == request.auth.uid);
+      allow create: if isAdmin() || (isBarber() && request.resource.data.barberoId == request.auth.uid);
+      allow update: if isAdmin() || (
+        isBarber() &&
+        resource.data.barberoId == request.auth.uid &&
+        request.resource.data.barberoId == request.auth.uid
+      );
+      allow delete: if isAdmin() || (isBarber() && resource.data.barberoId == request.auth.uid);
     }
   }
 }

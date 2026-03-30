@@ -9,6 +9,7 @@ interface UserRole {
   uid: string;
   email: string;
   name: string;
+  phone: string;
   role: "admin" | "barber";
 }
 
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
               name: data.name || firebaseUser.email?.split("@")[0] || "Usuario",
+              phone: data.phone || "",
               role: data.role || "barber",
             });
           } else {
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
               name: firebaseUser.email?.split("@")[0] || "Usuario",
+              phone: "",
               role: "barber",
             });
           }
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             uid: firebaseUser.uid,
             email: firebaseUser.email || "",
             name: firebaseUser.email?.split("@")[0] || "Usuario",
+            phone: "",
             role: "barber",
           });
         }

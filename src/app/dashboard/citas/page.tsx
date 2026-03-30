@@ -113,15 +113,12 @@ export default function CitasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl text-white tracking-wide">Citas</h1>
-        <p className="text-text-secondary mt-1">Gestiona tu calendario y horarios bloqueados</p>
-      </div>
+      
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <button onClick={handlePrevMonth} className="p-2 hover:bg-surface-high rounded-lg transition-colors">
+        <div className="lg:col-span-2 card-premium p-6">
+          <div className="flex items-center justify-end mb-6">
+        <button onClick={handlePrevMonth} className="p-2 hover:bg-surface-high rounded-lg transition-colors">
               <ChevronLeft className="text-text-secondary" />
             </button>
             <h2 className="font-display text-xl text-white">
@@ -148,8 +145,8 @@ export default function CitasPage() {
                   className={`
                     p-2 text-sm rounded-lg transition-all
                     ${!isCurrentMonth ? "text-text-muted/30" : ""}
-                    ${isSelected ? "bg-surgical-red text-white" : "hover:bg-surface-high"}
-                    ${isToday && !isSelected ? "border border-surgical-red" : ""}
+                    ${isSelected ? "bg-primary text-white" : "hover:bg-surface-high"}
+                    ${isToday && !isSelected ? "border border-primary" : ""}
                   `}
                 >
                   {day.getDate()}
@@ -159,7 +156,7 @@ export default function CitasPage() {
           </div>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="card-premium p-6">
           <h3 className="font-display text-xl text-white mb-4">
             {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
           </h3>
@@ -172,11 +169,11 @@ export default function CitasPage() {
                 return (
                   <button
                     key={time}
-                    onClick={() => !blocked && setFormData({ ...formData, time, barberId: userRole?.uid || "", serviceId: "", clientName: "", clientPhone: "" }) && setIsModalOpen(true)}
+                    onClick={() => { if (!blocked) { setFormData({ ...formData, time, barberId: userRole?.uid || "", serviceId: "", clientName: "", clientPhone: "" }); setIsModalOpen(true); } }}
                     disabled={blocked}
                     className={`
                       px-2 py-2 text-xs rounded-lg transition-all
-                      ${blocked ? "bg-red-500/20 text-red-500 cursor-not-allowed" : "bg-surface-high text-text-secondary hover:text-white hover:bg-surgical-red/20"}
+                      ${blocked ? "bg-red-500/20 text-red-500 cursor-not-allowed" : "bg-surface-high text-text-secondary hover:text-white hover:bg-primary/20"}
                     `}
                   >
                     {time}
@@ -208,15 +205,23 @@ export default function CitasPage() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-void/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card p-8 w-full max-w-md">
-            <h2 className="font-display text-2xl text-white mb-6">Bloquear Horario</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-sm">
+          <div className="card-premium w-full max-w-md p-8 relative border-t-2 border-t-primary border-primary/20">
+            <button 
+              onClick={() => setIsModalOpen(false)} 
+              className="absolute top-4 right-4 text-text-muted hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <h3 className="font-display text-3xl mb-6">
+              BLOQUEAR <span className="text-primary italic">HORARIO</span>
+            </h3>
             <form onSubmit={handleBlockTime} className="space-y-4">
               <div>
                 <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Hora</label>
                 <input 
                   type="text"
-                  className="input-surgical bg-transparent w-full"
+                  className="w-full bg-surface-high border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary/50 transition-colors font-body text-sm"
                   value={formData.time}
                   disabled
                 />
@@ -225,24 +230,24 @@ export default function CitasPage() {
                 <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Fecha</label>
                 <input 
                   type="text"
-                  className="input-surgical bg-transparent w-full"
+                  className="w-full bg-surface-high border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary/50 transition-colors font-body text-sm"
                   value={selectedDate.toLocaleDateString("es-ES")}
                   disabled
                 />
               </div>
-              <div className="flex gap-4 mt-6">
+              <div className="pt-4 flex gap-3">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-outline text-text-secondary hover:bg-surface-high transition-colors"
+                  className="w-full py-3 rounded-xl border border-outline text-text-muted hover:text-white transition-colors uppercase tracking-widest text-xs font-bold"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 btn-surgical flex items-center justify-center gap-2"
+                  className="w-full btn-primary py-3 flex justify-center items-center uppercase tracking-widest text-xs font-bold gap-2"
                 >
-                  <Check size={18} /> Bloquear
+                  <Check size={16} /> Bloquear
                 </button>
               </div>
             </form>

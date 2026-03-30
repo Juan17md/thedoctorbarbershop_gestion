@@ -35,15 +35,16 @@
   --color-surface-highest: #24252e;
   --color-surface-elevated: #16171f;
   
-  /* Red Accent — Primary */
-  --color-primary: #DC2626;
-  --color-primary-light: #F87171;
-  --color-primary-dark: #991B1B;
-  --color-primary-muted: rgba(220, 38, 38, 0.15);
-  --color-primary-glow: rgba(220, 38, 38, 0.25);
+  /* Gray Accent — Primary (Silver/Zinc scheme - Oscuro) */
+  --color-primary: #52525B;         /* Zinc 600 */
+  --color-primary-light: #A1A1AA;   /* Zinc 400 */
+  --color-primary-dark: #27272A;    /* Zinc 800 */
+  --color-primary-muted: rgba(82, 82, 91, 0.2);
+  --color-primary-glow: rgba(82, 82, 91, 0.35);
   
-  /* Data Colors */
+  /* Data Colors / Complementary */
   --color-success: #10B981;
+  --color-danger: #DC2626; /* Added red as complementary color */
   --color-info: #3B82F6;
   --color-warning: #F59E0B;
   --color-cyan: #06B6D4;
@@ -56,12 +57,12 @@
   /* Text */
   --color-text-primary: #FAFAFA;
   --color-text-secondary: #A1A1AA;
-  --color-text-muted: #52525B;
+  --color-text-muted: #52525B; /* Zinc 600 */
   
   /* Borders */
   --color-border-subtle: rgba(255, 255, 255, 0.05);
   --color-border-default: rgba(255, 255, 255, 0.08);
-  --color-border-accent: rgba(220, 38, 38, 0.3);
+  --color-border-accent: rgba(161, 161, 170, 0.3);
   
   /* === Tipografía Urban — 3 niveles === */
   --font-hero: 'Anton', Impact, sans-serif;
@@ -79,8 +80,22 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.7);
-  --shadow-red-glow: 0 0 15px rgba(220, 38, 38, 0.2);
-  --shadow-red-strong: 0 0 25px rgba(220, 38, 38, 0.35);
+  --shadow-red-glow: 0 0 15px rgba(255, 255, 255, 0.1);
+  --shadow-red-strong: 0 0 25px rgba(255, 255, 255, 0.2);
+  
+  /* === Animaciones === */
+  --animate-fade-in-up: fade-in-up 0.5s ease-out forwards;
+  
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
@@ -96,6 +111,33 @@
   body {
     @apply bg-void text-text-primary antialiased;
     letter-spacing: -0.01em;
+  }
+
+  /* Indica al navegador que los campos usan esquema oscuro */
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+
+  /* Evita el fondo claro que aplica el navegador en autocompletado */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    color: #FAFAFA !important;
+    -webkit-text-fill-color: #FAFAFA !important;
+    -webkit-background-clip: text;
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    box-shadow: 0 0 0 1000px transparent inset !important;
+    background-color: transparent !important;
+    caret-color: #FAFAFA !important;
+    transition: background-color 9999s ease-out 0s;
   }
   
   /* Anton para h1 (hero), Bebas Neue para h2-h4 (menú/secciones) */
@@ -119,7 +161,7 @@
   
   .card-premium:hover {
     @apply border-primary/20 -translate-y-1;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(220, 38, 38, 0.05);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.05);
   }
   
   /* Urban Glassmorphism */
@@ -130,24 +172,25 @@
   .glass-card {
     @apply backdrop-blur-xl bg-surface/40 border border-white/8 shadow-lg;
   }
+
+  /* Input Premium */
+  .input-premium {
+    @apply w-full px-4 py-3 bg-surface-high border border-border-subtle rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-300;
+  }
   
   /* === Botones Urban === */
-  .btn-primary {
+  .btn-primary, .btn-gold {
     @apply inline-flex items-center justify-center gap-2 px-8 py-3 rounded-md font-display text-lg tracking-widest transition-all duration-300;
-    background: linear-gradient(to right, #991B1B, #DC2626, #991B1B);
+    background: linear-gradient(to right, #27272A, #52525B, #27272A);
     background-size: 200% auto;
     color: #FFFFFF;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 15px rgba(82, 82, 91, 0.3);
   }
   
-  .btn-primary:hover {
+  .btn-primary:hover, .btn-gold:hover {
     @apply translate-y-[-2px] brightness-110;
     background-position: right center;
-    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.5);
-  }
-
-  .btn-gold {
-    @apply btn-primary;
+    box-shadow: 0 8px 25px rgba(82, 82, 91, 0.5);
   }
   
   /* Nav items refined */
@@ -156,7 +199,7 @@
   }
   
   .nav-item-active {
-    @apply glass-premium text-primary border-r-2 border-primary bg-primary/5 shadow-red-glow;
+    @apply backdrop-blur-2xl bg-void/60 border border-white/5 text-primary border-r-2 border-primary bg-primary/5 shadow-red-glow;
   }
   
   /* Header refined — Anton para impacto máximo */
@@ -173,7 +216,7 @@
 
 @layer utilities {
   .text-glow-red {
-    text-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
+    text-shadow: 0 0 10px rgba(161, 161, 170, 0.4);
   }
   
   .bg-primary-muted {
@@ -184,19 +227,17 @@
     border-color: var(--color-primary-glow);
   }
   
-  .glow-red {
+  .glow-red, .glow-gold {
     box-shadow: var(--shadow-red-strong);
   }
   
-  .glow-red-sm {
+  .glow-red-sm, .glow-gold-sm {
     box-shadow: var(--shadow-red-glow);
   }
-
-  .glow-gold { @apply glow-red; }
-  .glow-gold-sm { @apply glow-red-sm; }
   
   .stagger-children > * {
-    @apply opacity-0 animate-fade-in-up;
+    opacity: 0;
+    animation: fade-in-up 0.5s ease-out forwards;
   }
   
   /* Animation delays */
@@ -204,4 +245,9 @@
   .delay-children-1 > *:nth-child(2) { animation-delay: 200ms; }
   .delay-children-1 > *:nth-child(3) { animation-delay: 300ms; }
   .delay-children-1 > *:nth-child(4) { animation-delay: 400ms; }
+  
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
 }

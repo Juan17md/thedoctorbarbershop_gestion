@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { type BankAccount, type FinancialRecord } from "@/lib/types";
 import { 
   collection, 
   onSnapshot,
@@ -13,7 +12,7 @@ import {
   getDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Scissors, Edit2, Shield, MoreVertical, Users, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Shield, Users, TrendingUp, DollarSign, Calendar, Award, Activity } from "lucide-react";
 
 interface BarberWithStats {
   uid: string;
@@ -23,6 +22,7 @@ interface BarberWithStats {
   totalServices: number;
   totalRevenue: number;
   balance: number;
+  lastActivity?: string;
 }
 
 export default function PersonalPage() {
@@ -30,6 +30,7 @@ export default function PersonalPage() {
   const isAdmin = userRole?.role === "admin";
   const [barbers, setBarbers] = useState<BarberWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"equipo" | "configuracion">("equipo");
 
   useEffect(() => {
     if (!isAdmin) {
@@ -37,7 +38,6 @@ export default function PersonalPage() {
       return () => clearTimeout(timer);
     }
 
-    // Cargar usuarios
     const usersQuery = query(collection(db, "users"), orderBy("name"));
     
     const unsubscribe = onSnapshot(usersQuery, async (usersSnapshot) => {
@@ -47,13 +47,6 @@ export default function PersonalPage() {
         const userData = docSnap.data();
         const uid = docSnap.id;
         
-        // Obtener servicios del barbero
-        const servicesQuery = query(
-          collection(db, "finances"),
-          where("barberId", "==", uid)
-        );
-        
-        // Obtener banco del barbero
         const bankRef = doc(db, "bank", uid);
         const bankSnap = await getDoc(bankRef);
         const bankData = bankSnap.exists() ? bankSnap.data() : null;
@@ -76,7 +69,6 @@ export default function PersonalPage() {
     return () => unsubscribe();
   }, [isAdmin]);
 
-  // Obtener servicios por barbero
   useEffect(() => {
     if (!isAdmin || barbers.length === 0) return;
 
@@ -101,22 +93,19 @@ export default function PersonalPage() {
     return () => unsubscribe();
   }, [isAdmin, barbers.length]);
 
+  const totalTeamServices = barbers.reduce((acc, b) => acc + b.totalServices, 0);
+  const totalTeamRevenue = barbers.reduce((acc, b) => acc + b.totalRevenue, 0);
+  const avgServicesPerBarber = barbers.length > 0 ? Math.round(totalTeamServices / barbers.length) : 0;
+
   if (!isAdmin) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-4xl text-text-primary tracking-wide">
-            MI <span className="text-surgical-red italic">PERFIL</span>
-          </h1>
-          <p className="text-text-muted mt-2 text-sm">
-            Tu información como barbero.
-          </p>
-        </div>
+        
 
-        <div className="glass-card p-8">
+        <div className="card-premium p-8">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-20 h-20 rounded-full bg-surgical-red/20 flex items-center justify-center">
-              <span className="font-display text-3xl text-surgical-red">
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+              <span className="font-display text-3xl text-primary">
                 {userRole?.name?.[0] || "U"}
               </span>
             </div>
@@ -134,117 +123,243 @@ export default function PersonalPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-surgical-red animate-pulse font-display text-xl">Cargando...</div>
+        <div className="text-primary animate-pulse font-display text-xl">Cargando...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl text-text-primary tracking-wide">
-            GESTIÓN DE <span className="text-surgical-red italic">ESPECIALISTAS</span>
-          </h1>
-          <p className="text-text-muted mt-2 text-sm">
-            Administra los perfiles del equipo y visualiza su rendimiento.
-          </p>
-        </div>
+      
+
+      <div className="flex gap-2 border-b border-white/5 pb-1">
+        <button
+          onClick={() => setActiveTab("equipo")}
+          className={`px-6 py-3 font-display text-lg tracking-widest uppercase transition-all ${
+            activeTab === "equipo" 
+              ? "text-primary border-b-2 border-primary" 
+              : "text-text-muted hover:text-white"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Users size={18} />
+            Equipo
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("configuracion")}
+          className={`px-6 py-3 font-display text-lg tracking-widest uppercase transition-all ${
+            activeTab === "configuracion" 
+              ? "text-primary border-b-2 border-primary" 
+              : "text-text-muted hover:text-white"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Shield size={18} />
+            Configuración
+          </span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {barbers.map((barber, i) => (
-          <div key={barber.uid} className="glass-card overflow-hidden group hover:shadow-[0_0_20px_rgba(230,0,0,0.1)] transition-all hover:-translate-y-1">
-            <div className="p-8">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-16 h-16 rounded-full bg-surgical-red/20 text-surgical-red flex items-center justify-center font-display text-2xl shadow-red-glow">
-                  {barber.name[0]}
-                </div>
-                <button className="text-text-muted hover:text-white transition-colors">
-                  <MoreVertical size={20} />
-                </button>
+      {activeTab === "equipo" && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="card-premium p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Users className="text-primary" size={24} />
               </div>
-
               <div>
-                <h3 className="font-display text-3xl text-text-primary mb-1 group-hover:text-white transition-colors">
-                  {barber.name}
-                </h3>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase rounded-sm bg-surface-high border border-white/5 mb-4 text-surgical-red-light">
-                  {barber.role === "admin" && <Shield size={10} className="text-surgical-red animate-pulse" />}
-                  {barber.role === "admin" ? "Administrador" : "Barbero"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-outline">
-                <div>
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1 border-b border-outline pb-1 font-medium">Servicios</p>
-                  <p className="font-display text-2xl text-white">{barber.totalServices}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1 border-b border-outline pb-1 font-medium">Ganancias</p>
-                  <p className="font-display text-2xl text-green-400">${barber.totalRevenue.toFixed(2)}</p>
-                </div>
+                <p className="text-text-muted text-xs font-bold uppercase tracking-widest">Total Equipo</p>
+                <p className="font-display text-3xl text-white">{barbers.length}</p>
               </div>
             </div>
-
-            <div className="p-4 bg-surface-lowest border-t border-white/5 flex justify-between items-center group-hover:bg-surgical-red/5 transition-colors">
-              <button className="text-[10px] text-text-secondary hover:text-white uppercase tracking-widest font-bold transition-colors flex items-center gap-2">
-                <Edit2 size={12} /> Editar Perfil
-              </button>
-              <span className="text-xs text-text-muted">
-                Saldo: ${barber.balance.toFixed(2)}
-              </span>
+            
+            <div className="card-premium p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <Activity className="text-green-500" size={24} />
+              </div>
+              <div>
+                <p className="text-text-muted text-xs font-bold uppercase tracking-widest">Servicios Totales</p>
+                <p className="font-display text-3xl text-white">{totalTeamServices}</p>
+              </div>
+            </div>
+            
+            <div className="card-premium p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <TrendingUp className="text-blue-500" size={24} />
+              </div>
+              <div>
+                <p className="text-text-muted text-xs font-bold uppercase tracking-widest">Promedio x Barbero</p>
+                <p className="font-display text-3xl text-white">{avgServicesPerBarber}</p>
+              </div>
+            </div>
+            
+            <div className="card-premium p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                <DollarSign className="text-cyan-500" size={24} />
+              </div>
+              <div>
+                <p className="text-text-muted text-xs font-bold uppercase tracking-widest">Ingresos Equipo</p>
+                <p className="font-display text-3xl text-green-400">${totalTeamRevenue.toFixed(0)}</p>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      {barbers.length === 0 && (
-        <div className="glass-card p-12 text-center">
-          <Users size={48} className="text-text-muted mx-auto mb-4" />
-          <p className="text-text-muted">No hay barberos registrados</p>
-          <p className="text-text-muted text-sm mt-2">Crea usuarios desde Firebase Authentication</p>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {barbers.map((barber) => (
+              <div key={barber.uid} className="card-premium overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center font-display text-3xl text-primary border border-primary/20">
+                      {barber.name[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-xl text-white truncate">{barber.name}</h3>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase rounded-md mt-1 ${
+                        barber.role === "admin" 
+                          ? "bg-primary/10 text-primary border border-primary/20" 
+                          : "bg-surface-high text-text-secondary border border-white/5"
+                      }`}>
+                        {barber.role === "admin" && <Shield size={10} />}
+                        {barber.role === "admin" ? "Admin" : "Barbero"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                      <span className="text-text-muted text-xs uppercase tracking-widest flex items-center gap-2">
+                        <Calendar size={14} /> Servicios
+                      </span>
+                      <span className="font-display text-xl text-white">{barber.totalServices}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                      <span className="text-text-muted text-xs uppercase tracking-widest flex items-center gap-2">
+                        <DollarSign size={14} /> Ingresos
+                      </span>
+                      <span className="font-display text-xl text-green-400">${barber.totalRevenue.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-text-muted text-xs uppercase tracking-widest flex items-center gap-2">
+                        <Award size={14} /> Balance
+                      </span>
+                      <span className={`font-display text-xl ${barber.balance > 0 ? "text-cyan-400" : "text-text-secondary"}`}>
+                        ${barber.balance.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {barbers.length === 0 && (
+            <div className="card-premium p-12 text-center">
+              <Users size={48} className="text-text-muted mx-auto mb-4" />
+              <p className="text-text-muted">No hay barberos registrados</p>
+              <p className="text-text-muted text-sm mt-2">Crea usuarios desde Firebase Authentication</p>
+            </div>
+          )}
+        </>
       )}
 
-      <div className="glass-card p-8">
-        <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3">
-          <Shield className="text-surgical-red" />
-          Configuración de Comisiones
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Comisión Barbero (60%)</label>
-              <div className="flex items-center gap-4">
-                <input type="number" defaultValue={60} className="input-surgical max-w-[120px]" readOnly />
-                <span className="text-xl text-text-muted">%</span>
+      {activeTab === "configuracion" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="card-premium p-8">
+            <h3 className="font-display text-2xl text-white mb-2 flex items-center gap-3">
+              <Shield className="text-primary" size={24} />
+              Distribución de Comisiones
+            </h3>
+            <p className="text-text-muted text-sm mb-8">
+              Configura el porcentaje de ganancias para barberos y barbería.
+            </p>
+            
+            <div className="space-y-6">
+              <div className="bg-surface-high rounded-xl p-6 border border-white/5">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-white font-display text-lg">Barbero</span>
+                  <span className="text-green-400 font-display text-3xl">60%</span>
+                </div>
+                <div className="h-3 bg-surface-low rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full" style={{ width: "60%" }} />
+                </div>
+                <p className="text-text-muted text-xs mt-3">
+                  Por cada servicio realizado, el barbero recibe el 60% del valor.
+                </p>
+              </div>
+
+              <div className="bg-surface-high rounded-xl p-6 border border-white/5">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-white font-display text-lg">Barbería</span>
+                  <span className="text-blue-400 font-display text-3xl">40%</span>
+                </div>
+                <div className="h-3 bg-surface-low rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style={{ width: "40%" }} />
+                </div>
+                <p className="text-text-muted text-xs mt-3">
+                  El 40% restante va directo a los ingresos de la barbería.
+                </p>
               </div>
             </div>
-            <p className="text-xs text-text-muted leading-relaxed">
-              Este porcentaje se asigna automáticamente al barbero por cada servicio realizado.
-              El 40% restante va directo a la barbería.
-            </p>
+
+            <div className="mt-8 p-4 bg-surface-high/50 rounded-lg border border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="text-primary" size={20} />
+                </div>
+                <div>
+                  <p className="text-white font-display text-sm">Distribución Actual</p>
+                  <p className="text-text-muted text-xs">60% Barbero / 40% Barbería</p>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div className="flex flex-col justify-end">
-            <div className="bg-surface-high/50 p-4 rounded-lg">
-              <p className="text-text-secondary text-sm mb-2">Distribución actual</p>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="h-3 bg-green-500 rounded-full" style={{ width: "60%" }} />
-                  <p className="text-xs text-green-400 mt-1">Barbero: 60%</p>
+
+          <div className="card-premium p-8">
+            <h3 className="font-display text-2xl text-white mb-2 flex items-center gap-3">
+              <Award className="text-primary" size={24} />
+              Resumen Financiero
+            </h3>
+            <p className="text-text-muted text-sm mb-8">
+              Vista general de las métricas del equipo.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-surface-high rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <Users className="text-text-muted" size={20} />
+                  <span className="text-text-secondary text-sm">Total Especialistas</span>
                 </div>
-                <div className="flex-1">
-                  <div className="h-3 bg-blue-500 rounded-full" style={{ width: "40%" }} />
-                  <p className="text-xs text-blue-400 mt-1">Barbería: 40%</p>
+                <span className="font-display text-2xl text-white">{barbers.length}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-4 bg-surface-high rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <Calendar className="text-text-muted" size={20} />
+                  <span className="text-text-secondary text-sm">Servicios Realizados</span>
                 </div>
+                <span className="font-display text-2xl text-white">{totalTeamServices}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-4 bg-surface-high rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="text-text-muted" size={20} />
+                  <span className="text-text-secondary text-sm">Ingresos Totales</span>
+                </div>
+                <span className="font-display text-2xl text-green-400">${totalTeamRevenue.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-4 bg-surface-high rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="text-text-muted" size={20} />
+                  <span className="text-text-secondary text-sm">Promedio por Barbero</span>
+                </div>
+                <span className="font-display text-2xl text-cyan-400">${avgServicesPerBarber > 0 ? (totalTeamRevenue / barbers.length || 0).toFixed(2) : "0.00"}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

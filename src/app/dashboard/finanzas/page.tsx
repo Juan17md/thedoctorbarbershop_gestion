@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { type FinancialRecord, SERVICES, BARBERS } from "@/lib/types";
+import { type FinancialRecord, SERVICES, type Service } from "@/lib/types";
 import { 
   collection, 
   addDoc, 
@@ -18,7 +18,9 @@ import {
   increment
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, TrendingUp, Calendar, Users, Scissors, Wallet, Filter, Plus, Check } from "lucide-react";
+import { DollarSign, Users, Wallet, Plus, Check } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
 
 interface Transaccion {
   id: string;
@@ -28,32 +30,41 @@ interface Transaccion {
   fechaString: string;
 }
 
+const normalizarNombreServicio = (nombre: string) => nombre.trim().toLowerCase();
+
 export default function FinanzasPage() {
   const { userRole } = useAuth();
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
+  const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
   const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("day");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "" });
 
   useEffect(() => {
-    let q;
-    if (isAdmin) {
-      q = query(collection(db, "finances"), orderBy("date", "desc"));
-    } else {
-      q = query(collection(db, "finances"), where("barberId", "==", userRole?.uid), orderBy("date", "desc"));
+    if (!userRole?.uid) {
+      return;
     }
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
+
+    const consulta = isAdmin
+      ? query(collection(db, "finances"), orderBy("date", "desc"))
+      : query(
+          collection(db, "finances"),
+          where("barberId", "==", userRole.uid),
+          orderBy("date", "desc")
+        );
+
+    const unsubscribe = onSnapshot(consulta, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate()
+        createdAt: doc.data().createdAt?.toDate(),
       })) as FinancialRecord[];
       setRecords(data);
     });
+
     return () => unsubscribe();
   }, [isAdmin, userRole?.uid]);
 
@@ -66,6 +77,29 @@ export default function FinanzasPage() {
       })) as Transaccion[];
       setTransacciones(datos);
     });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "services"), orderBy("name"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const serviciosPersonalizados = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Service[];
+
+      const serviciosBase = [...SERVICES];
+      const nombresBase = new Set(
+        serviciosBase.map((servicio) => normalizarNombreServicio(servicio.name))
+      );
+
+      const serviciosExtra = serviciosPersonalizados.filter(
+        (servicio) => !nombresBase.has(normalizarNombreServicio(servicio.name))
+      );
+
+      setServiciosDisponibles([...serviciosBase, ...serviciosExtra]);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -104,7 +138,7 @@ export default function FinanzasPage() {
 
   const handleRegisterService = async (e: React.FormEvent) => {
     e.preventDefault();
-    const service = SERVICES.find(s => s.id === formData.serviceId);
+    const service = serviciosDisponibles.find(s => s.id === formData.serviceId);
     if (!service) return;
 
     const totalAmount = service.price;
@@ -113,7 +147,7 @@ export default function FinanzasPage() {
     const date = new Date().toISOString().split("T")[0];
 
     // 1. Crear registro financiero
-    const financeDoc = await addDoc(collection(db, "finances"), {
+    await addDoc(collection(db, "finances"), {
       serviceId: service.id,
       serviceName: service.name,
       barberId: userRole?.uid,
@@ -231,199 +265,193 @@ export default function FinanzasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-white tracking-wide">Finanzas</h1>
-          <p className="text-text-secondary mt-1">
-            {isAdmin ? "Gestiona las finanzas de la barbería" : "Gestiona tus finanzas"}
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2 animate-fade-in-up">
+        <div className="flex flex-wrap gap-4 items-center delay-children-1">
+          <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
+            <button 
+              onClick={() => setPeriodFilter("day")}
+              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
+            >
+              Hoy
+            </button>
+            <button 
+              onClick={() => setPeriodFilter("week")}
+              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
+            >
+              Semana
+            </button>
+            <button 
+              onClick={() => setPeriodFilter("month")}
+              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
+            >
+              Mes
+            </button>
+          </div>
+
+          {periodFilter === "day" && (
+            <DatePicker
+              value={selectedDate}
+              onChange={(v) => setSelectedDate(v)}
+              placeholder="Seleccionar fecha"
+            />
+          )}
         </div>
+
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="btn-surgical flex items-center gap-2"
+          className="btn-primary text-sm py-2.5 px-6 whitespace-nowrap"
         >
           <Plus size={18} /> Registrar Servicio
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex bg-surface-high rounded-lg p-1">
-          <button 
-            onClick={() => setPeriodFilter("day")}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors ${periodFilter === "day" ? "bg-surgical-red text-white" : "text-text-secondary hover:text-white"}`}
-          >
-            Hoy
-          </button>
-          <button 
-            onClick={() => setPeriodFilter("week")}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors ${periodFilter === "week" ? "bg-surgical-red text-white" : "text-text-secondary hover:text-white"}`}
-          >
-            Semana
-          </button>
-          <button 
-            onClick={() => setPeriodFilter("month")}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors ${periodFilter === "month" ? "bg-surgical-red text-white" : "text-text-secondary hover:text-white"}`}
-          >
-            Mes
-          </button>
-        </div>
-
-        {periodFilter === "day" && (
-          <input 
-            type="date" 
-            className="input-surgical bg-surface-high"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-card p-6 border border-surgical-red/30">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up delay-children-1">
+        <div className="card-premium p-6 border-l-4 border-l-primary/80">
           <div className="flex items-center gap-3 mb-2">
-            <DollarSign size={24} className="text-surgical-red" />
-            <span className="text-text-secondary text-sm">Servicios (Total)</span>
+            <DollarSign size={24} className="text-primary" />
+            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">Servicios (Total)</span>
           </div>
-          <p className="font-display text-3xl text-white">${totalRevenue.toFixed(2)}</p>
+          <p className="font-display text-4xl text-white mt-4">${totalRevenue.toFixed(2)}</p>
         </div>
         
-        <div className="glass-card p-6">
+        <div className="card-premium p-6">
           <div className="flex items-center gap-3 mb-2">
             <Users size={24} className="text-blue-400" />
-            <span className="text-text-secondary text-sm">{isAdmin ? "Para Barberos (60%)" : "Tu Parte (60%)"}</span>
+            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">{isAdmin ? "Para Barberos (60%)" : "Tu Parte (60%)"}</span>
           </div>
-          <p className="font-display text-3xl text-white">${barberShare.toFixed(2)}</p>
+          <p className="font-display text-4xl text-white mt-4">${barberShare.toFixed(2)}</p>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="card-premium p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Wallet size={24} className="text-green-400" />
-            <span className="text-text-secondary text-sm">Para Barbería (40%)</span>
+            <Wallet size={24} className="text-emerald-400" />
+            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">Para Barbería (40%)</span>
           </div>
-          <p className="font-display text-3xl text-white">${barberiaShare.toFixed(2)}</p>
+          <p className="font-display text-4xl text-white mt-4">${barberiaShare.toFixed(2)}</p>
         </div>
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="glass-card p-6 border-l-4 border-l-green-500">
-            <p className="text-text-secondary text-sm">Ingresos (Actas)</p>
-            <p className="font-display text-2xl text-white">${ingresos.toFixed(2)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
+          <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
+            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Ingresos (Actas)</p>
+            <p className="font-display text-3xl text-white">${ingresos.toFixed(2)}</p>
           </div>
-          <div className="glass-card p-6 border-l-4 border-l-red-500">
-            <p className="text-text-secondary text-sm">Egresos (Gastos)</p>
-            <p className="font-display text-2xl text-white">${egresos.toFixed(2)}</p>
+          <div className="card-premium p-6 border-l-4 border-l-red-500/80">
+            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Egresos (Gastos)</p>
+            <p className="font-display text-3xl text-white">${egresos.toFixed(2)}</p>
           </div>
-          <div className="glass-card p-6 border-l-4 border-surgical-red">
-            <p className="text-text-secondary text-sm">Balance Neto</p>
-            <p className="font-display text-2xl text-white">${(ingresos - egresos).toFixed(2)}</p>
+          <div className="card-premium p-6 border-l-4 border-primary">
+            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Balance Neto</p>
+            <p className="font-display text-3xl text-white">${(ingresos - egresos).toFixed(2)}</p>
           </div>
         </div>
       )}
 
       {Object.keys(revenueByService).length > 0 && (
-        <div className="glass-card p-6">
-          <h3 className="font-display text-xl text-white mb-4">Ganancias por Servicio</h3>
+        <div className="card-premium overflow-hidden animate-fade-in-up">
+          <div className="p-6 border-b border-white/5">
+            <h3 className="font-display text-xl text-white tracking-widest uppercase">Ganancias por Servicio</h3>
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-outline">
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Servicio</th>
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Citas</th>
-                  <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead>Servicio</TableHead>
+                  <TableHead>Citas</TableHead>
+                  <TableHead>Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {Object.entries(revenueByService).map(([service, amount]) => (
-                  <tr key={service} className="border-b border-white/5">
-                    <td className="py-3 px-4 text-white">{service}</td>
-                    <td className="py-3 px-4 text-text-secondary">{serviceCount[service]}</td>
-                    <td className="py-3 px-4 text-surgical-red font-display">${amount.toFixed(2)}</td>
-                  </tr>
+                  <TableRow key={service}>
+                    <TableCell className="text-white text-sm font-medium">{service}</TableCell>
+                    <TableCell className="text-text-secondary text-sm">{serviceCount[service]}</TableCell>
+                    <TableCell className="text-primary font-display text-lg tracking-wider">${amount.toFixed(2)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
 
-      <div className="glass-card p-6">
-        <h3 className="font-display text-xl text-white mb-4">Historial de Servicios</h3>
+      <div className="card-premium overflow-hidden animate-fade-in-up">
+        <div className="p-6 border-b border-white/5">
+          <h3 className="font-display text-xl text-white tracking-widest uppercase">Historial de Servicios</h3>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-outline">
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Fecha</th>
-                {isAdmin && <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Barbero</th>}
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Servicio</th>
-                <th className="text-left py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Cliente</th>
-                <th className="text-right py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Total</th>
-                <th className="text-right py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">{isAdmin ? "Barbero (60%)" : "Tu Parte"}</th>
-                <th className="text-right py-3 px-4 text-xs text-text-muted uppercase tracking-wider font-medium">Barbería (40%)</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead>Fecha</TableHead>
+                {isAdmin && <TableHead>Barbero</TableHead>}
+                <TableHead>Servicio</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead align="right">Total</TableHead>
+                <TableHead align="right">{isAdmin ? "Barbero (60%)" : "Tu Parte"}</TableHead>
+                <TableHead align="right">Barbería (40%)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredRecords.slice(0, 20).map((record) => (
-                <tr key={record.id} className="border-b border-white/5 hover:bg-surface-high/30">
-                  <td className="py-3 px-4 text-text-secondary">{record.date}</td>
-                  {isAdmin && <td className="py-3 px-4 text-white">{record.barberName}</td>}
-                  <td className="py-3 px-4 text-white">{record.serviceName}</td>
-                  <td className="py-3 px-4 text-text-secondary">{record.clientName}</td>
-                  <td className="py-3 px-4 text-white text-right">${record.totalAmount.toFixed(2)}</td>
-                  <td className="py-3 px-4 text-green-400 text-right">${record.barberShare.toFixed(2)}</td>
-                  <td className="py-3 px-4 text-blue-400 text-right">${record.barberiaShare.toFixed(2)}</td>
-                </tr>
+                <TableRow key={record.id}>
+                  <TableCell className="text-text-secondary text-sm">{record.date}</TableCell>
+                  {isAdmin && <TableCell className="text-white text-sm font-medium">{record.barberName}</TableCell>}
+                  <TableCell className="text-white text-sm font-medium">{record.serviceName}</TableCell>
+                  <TableCell className="text-text-secondary text-sm">{record.clientName}</TableCell>
+                  <TableCell className="text-white text-right font-display tracking-widest">${record.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-emerald-400 text-right font-display tracking-widest">${record.barberShare.toFixed(2)}</TableCell>
+                  <TableCell className="text-blue-400 text-right font-display tracking-widest">${record.barberiaShare.toFixed(2)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {filteredRecords.length === 0 && (
-          <div className="text-center py-12 text-text-muted">
-            No hay servicios registrados en el período seleccionado
+          <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+            <Wallet size={48} className="text-surface-highest mb-4" />
+            <p className="text-sm font-display tracking-widest uppercase">No hay servicios en el período seleccionado</p>
           </div>
         )}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-void/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card p-8 w-full max-w-md">
-            <h2 className="font-display text-2xl text-white mb-6">Registrar Servicio</h2>
-            <form onSubmit={handleRegisterService} className="space-y-4">
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+            <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Registrar Servicio</h2>
+            <form onSubmit={handleRegisterService} className="space-y-6">
               <div>
-                <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Servicio</label>
-                <select 
-                  className="input-surgical bg-transparent w-full"
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Servicio</label>
+                <Select
+                  options={serviciosDisponibles.map(s => ({ value: s.id, label: `$${s.price.toFixed(2)} - ${s.name}` }))}
                   value={formData.serviceId}
-                  onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
-                  required
-                >
-                  <option value="">Seleccionar servicio...</option>
-                  {SERVICES.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} - ${s.price}</option>
-                  ))}
-                </select>
+                  onChange={(val: string) => setFormData({ ...formData, serviceId: val })}
+                  placeholder="Seleccionar servicio..."
+                  className="bg-void/50 border-white/10 rounded-md"
+                />
               </div>
               <div>
-                <label className="block text-xs text-text-secondary uppercase tracking-wider mb-2">Cliente (opcional)</label>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Cliente (opcional)</label>
                 <input 
                   type="text" 
-                  className="input-surgical bg-transparent w-full"
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none placeholder:text-text-muted/50"
                   placeholder="Nombre del cliente"
                   value={formData.clientName}
                   onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                 />
               </div>
-              <div className="flex gap-4 mt-6">
+              <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-outline text-text-secondary hover:bg-surface-high transition-colors"
+                  className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 btn-surgical flex items-center justify-center gap-2"
+                  className="flex-1 btn-primary text-sm py-3"
                 >
                   <Check size={18} /> Registrar
                 </button>

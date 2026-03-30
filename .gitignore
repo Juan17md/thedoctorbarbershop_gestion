@@ -1,6 +1,9 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Referencia:
+# https://git-scm.com/docs/gitignore
 
-# dependencies
+# ------------------------------
+# Dependencias
+# ------------------------------
 /node_modules
 /.pnp
 .pnp.*
@@ -10,32 +13,119 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ------------------------------
+# Build / ejecución
+# ------------------------------
 /.next/
 /out/
+/build/
+/dist/
 
-# production
-/build
+# ------------------------------
+# Cobertura y reportes
+# ------------------------------
+/coverage
+*.lcov
+.nyc_output/
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# ------------------------------
+# Logs y depuración
+# ------------------------------
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
+# ------------------------------
+# Variables de entorno
+# ------------------------------
 .env*
+!.env.example
+!.env*.example
 
-# vercel
+# ------------------------------
+# Vercel
+# ------------------------------
 .vercel
 
-# typescript
+# ------------------------------
+# TypeScript
+# ------------------------------
 *.tsbuildinfo
 next-env.d.ts
+
+# ------------------------------
+# Sistema / editores
+# ------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# ------------------------------
+# Archivos sensibles
+# ------------------------------
+*.pem
+*.key
+*.crt
+*.p12
+*.cer
+
+# ------------------------------
+# Firebase / emuladores / exports locales
+# ------------------------------
+.firebase/
+firestore-debug.log
+ui-debug.log
+*-debug.log
+firebase-debug.log*
+firebase-export-*
+
+# ------------------------------
+# Caché
+# ------------------------------
+.cache/
+.parcel-cache/
+.turbo/
+tmp/
+temp/
+
+# ------------------------------
+# Herramientas de IA / asistentes / contexto local
+# Se ignoran datos locales, sesiones, cachés y configuraciones
+# privadas de herramientas de IA.
+# ------------------------------
+.claude/
+.cursor/
+.cursor-tutor/
+.windsurf/
+.copilot/
+.github/copilot-instructions.local.md
+.aider*
+.roo/
+.kilocode/
+.continue/
+.gemini/
+.opencode/
+.qodo/
+.llm/
+.ai/
+.prompts/
+.memory/
+.memories/
+.sessions/
+.context/
+.contexts/
+
+# ------------------------------
+# Otros
+# ------------------------------
+*.pid
+*.seed
+createAdmin.js
