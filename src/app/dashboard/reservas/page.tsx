@@ -278,6 +278,15 @@ export default function ReservasDashboardPage() {
     [reservas]
   );
 
+  const opcionesFiltro: SelectOption[] = useMemo(
+    () =>
+      ESTADOS_FILTRO.map((estado) => ({
+        value: estado,
+        label: `${estado.charAt(0).toUpperCase() + estado.slice(1)} (${conteo[estado]})`,
+      })),
+    [conteo]
+  );
+
   const opcionesBarberos: SelectOption[] = useMemo(
     () =>
       barberos.map((barbero) => ({
@@ -573,12 +582,22 @@ export default function ReservasDashboardPage() {
       )}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-2">
+        <div className="lg:hidden">
+          <SelectField
+            label="Filtrar por estado"
+            options={opcionesFiltro}
+            value={filtroEstado}
+            onValueChange={(value) => setFiltroEstado(value as "todos" | ReservaEstado)}
+            placeholder="Seleccionar estado"
+            className="w-full sm:w-48"
+          />
+        </div>
+        <div className="hidden lg:flex gap-2 overflow-x-auto pb-2">
           {ESTADOS_FILTRO.map((estado) => (
             <button
               key={estado}
               onClick={() => setFiltroEstado(estado)}
-              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all border ${
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-md font-display text-[12px] sm:text-[13px] font-bold tracking-widest uppercase transition-all border whitespace-nowrap ${
                 filtroEstado === estado
                   ? "bg-primary/15 text-white border-primary shadow-red-glow"
                   : "bg-surface-high text-text-secondary border-white/5 hover:border-primary/30 hover:text-white"
@@ -592,10 +611,10 @@ export default function ReservasDashboardPage() {
           ))}
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        <div className="flex gap-3 sm:w-auto sm:flex-row">
           <Link
             href="/dashboard/reservas/agenda"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-surface-high px-6 py-2.5 text-sm font-bold text-text-secondary transition-all hover:border-primary/30 hover:text-white self-start lg:self-auto"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-surface-high px-6 py-2.5 text-sm font-bold text-text-secondary transition-all hover:border-primary/30 hover:text-white"
           >
             <CalendarDays size={18} />
             Ver agenda
@@ -603,7 +622,7 @@ export default function ReservasDashboardPage() {
 
           <button
             onClick={abrirModalCrear}
-            className="btn-primary inline-flex items-center gap-2 text-sm py-2.5 px-6 self-start lg:self-auto"
+            className="btn-primary inline-flex items-center gap-2 text-sm py-2.5 px-6"
           >
             <Plus size={18} />
             Nueva reserva

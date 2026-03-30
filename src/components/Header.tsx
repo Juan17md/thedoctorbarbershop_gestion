@@ -119,12 +119,6 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   return (
     <header className="h-28 glass-premium sticky top-0 z-20 flex items-center justify-between px-8 border-b border-white/5">
       <div className="flex items-center gap-8">
-        <button 
-          onClick={onOpenSidebar}
-          className="lg:hidden p-3 rounded-xl bg-surface-high text-text-muted hover:text-white transition-all border border-white/5 shadow-md"
-        >
-          <Menu size={20} />
-        </button>
         <div className="animate-fade-in-up flex flex-col justify-center">
           <h2 className="text-urban-header text-text-primary tracking-tighter leading-none text-2xl sm:text-3xl lg:text-4xl">
             {title}
@@ -136,6 +130,12 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-8">
+        <button 
+          onClick={onOpenSidebar}
+          className="lg:hidden p-3 rounded-xl bg-surface-high text-text-muted hover:text-white transition-all border border-white/5 shadow-md"
+        >
+          <Menu size={20} />
+        </button>
         <div className="hidden lg:flex flex-col items-end">
           <p className="text-[10px] text-text-muted uppercase tracking-[0.2em] font-bold">
             {new Date().toLocaleDateString('es-ES', { weekday: 'long' })}

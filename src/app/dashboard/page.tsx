@@ -93,11 +93,11 @@ export default function DashboardPage() {
       <div className="space-y-8">
         
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 stagger-children">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
-              <div key={i} className="card-premium p-6 group">
+              <div key={i} className="card-premium p-4 sm:p-6 group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="w-12 h-12 rounded-lg bg-surface-high flex items-center justify-center border border-white/5 group-hover:border-primary/50 transition-colors">
                     <Icon size={20} className={stat.color} />
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-text-muted text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-70">{stat.name}</p>
-                  <h3 className="font-display text-5xl text-text-primary tracking-tight leading-none group-hover:scale-110 transition-transform origin-left duration-500">{stat.value}</h3>
+                  <h3 className="font-display text-3xl sm:text-5xl text-text-primary tracking-tight leading-none group-hover:scale-110 transition-transform origin-left duration-500">{stat.value}</h3>
                 </div>
               </div>
             );
@@ -113,10 +113,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <div className="card-premium p-6">
-            <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
+          <div className="card-premium p-4 sm:p-6">
+            <h3 className="font-display text-lg sm:text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
               <Wallet size={22} className="text-primary" />
-              DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>
+              DISTRIBUCIÓN DE GANANCIAS (HOY)
             </h3>
             {(() => {
               const earningsByBarber = todayRecords.reduce((acc, r) => {
@@ -132,7 +132,7 @@ export default function DashboardPage() {
               return (
                 <div className={`grid ${gridCols} gap-4`}>
                   {barberEntries.map(([name, data]) => (
-                    <div key={name} className="bg-surface-high/50 p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
+                    <div key={name} className="bg-surface-high/50 p-3 sm:p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
                       <div className="flex items-center gap-3 mb-5">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
                           <Scissors size={18} className="text-primary" />
