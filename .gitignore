@@ -127,3 +127,5 @@ temp/
 *.pid
 *.seed
 createAdmin.js
+CLAUDE.md
+AGENT.md
