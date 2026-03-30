@@ -20,8 +20,8 @@ export default function DashboardPage() {
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("today");
-  const [rankingFilter, setRankingFilter] = useState<"today" | "week" | "month">("today");
+  const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("week");
+  const [rankingFilter, setRankingFilter] = useState<"today" | "week" | "month">("week");
 
   useEffect(() => {
     if (!userRole?.uid) return;

@@ -2,13 +2,20 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { type FinancialRecord } from "@/lib/types";
+import { type FinancialRecord, type Service, SERVICES } from "@/lib/types";
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
   where,
+  deleteDoc,
+  doc,
+  getDoc,
+  updateDoc,
+  increment,
+  getDocs,
+  addDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -20,6 +27,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Pencil,
+  Trash2,
+  Check
 } from "lucide-react";
 import {
   Table,
@@ -44,7 +54,7 @@ export default function HistorialPage() {
   const [pagina, setPagina] = useState(1);
 
   // Filtros
-  const [periodo, setPeriodo] = useState<"hoy" | "semana" | "mes" | "todo">("todo");
+  const [periodo, setPeriodo] = useState<"hoy" | "semana" | "mes" | "todo">("semana");
   const [busqueda, setBusqueda] = useState("");
   const [filtroBarbero, setFiltroBarbero] = useState("todos");
   const [filtroServicio, setFiltroServicio] = useState("todos");
@@ -52,6 +62,14 @@ export default function HistorialPage() {
     new Date().toISOString().split("T")[0]
   );
 
+  // Estado para Edición
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
+  const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
+  const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
+  const [barbers, setBarbers] = useState<any[]>([]);
+
+  // Efecto para registros
   useEffect(() => {
     if (!userRole?.uid) return;
     let q;
@@ -75,6 +93,305 @@ export default function HistorialPage() {
     });
     return () => unsubscribe();
   }, [esAdmin, userRole?.uid]);
+
+  // Efecto para servicios disponibles (para el modal de edición)
+  useEffect(() => {
+    const q = query(collection(db, "services"), orderBy("name"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const serviciosPersonalizados = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Service[];
+
+      const serviciosBase = [...SERVICES];
+      const normalizarNombreServicio = (nombre: string) => nombre.trim().toLowerCase();
+      const nombresBase = new Set(
+        serviciosBase.map((servicio) => normalizarNombreServicio(servicio.name))
+      );
+
+      const serviciosExtra = serviciosPersonalizados.filter(
+        (servicio) => !nombresBase.has(normalizarNombreServicio(servicio.name))
+      );
+
+      setServiciosDisponibles([...serviciosBase, ...serviciosExtra]);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Efecto para barberos (para el modal de edición como admin)
+  useEffect(() => {
+    if (!esAdmin) return;
+    const consulta = query(
+      collection(db, "users"), 
+      where("role", "==", "barber"),
+      orderBy("name")
+    );
+    const unsubscribe = onSnapshot(consulta, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBarbers(data);
+    });
+    return () => unsubscribe();
+  }, [esAdmin]);
+
+  // Eliminar Registro
+  const handleDelete = async (record: FinancialRecord) => {
+    if (!window.confirm("¿Estás seguro de eliminar este registro? Se revertirán los saldos de ganancias asociados.")) return;
+
+    try {
+      // 1. Revertir saldo del barbero
+      const barberBankRef = doc(db, "bank", record.barberId);
+      const barberBankDoc = await getDoc(barberBankRef);
+      if (barberBankDoc.exists()) {
+        await updateDoc(barberBankRef, {
+          balance: increment(-record.barberShare),
+          totalEarned: increment(-record.barberShare),
+          lastUpdated: new Date()
+        });
+      }
+
+      // 2. Transacción de reversión del barbero
+      await addDoc(collection(db, "bank_transactions"), {
+        userId: record.barberId,
+        userName: record.barberName,
+        type: "deduction",
+        amount: record.barberShare,
+        description: `Eliminación/Reversión: ${record.serviceName}`,
+        date: new Date().toISOString().split("T")[0],
+        createdAt: new Date()
+      });
+
+      // 3. Revertir saldo de barbería
+      const barberiaBankRef = doc(db, "bank", "barbershop");
+      const barberiaBankDoc = await getDoc(barberiaBankRef);
+      if (barberiaBankDoc.exists()) {
+        await updateDoc(barberiaBankRef, {
+          balance: increment(-record.barberiaShare),
+          totalEarned: increment(-record.barberiaShare),
+          lastUpdated: new Date()
+        });
+      }
+
+      // 4. Transacción de reversión de barbería
+      await addDoc(collection(db, "bank_transactions"), {
+        userId: "barbershop",
+        userName: "The Doctor Barber Shop",
+        type: "deduction",
+        amount: record.barberiaShare,
+        description: `Eliminación/Reversión: ${record.serviceName} (${record.barberName})`,
+        date: new Date().toISOString().split("T")[0],
+        createdAt: new Date()
+      });
+
+      // 5. Ajustar objetivos (si aplican)
+      try {
+        const now = new Date();
+        const objectivesQuery = query(collection(db, "objectives"));
+        const objectivesSnapshot = await getDocs(objectivesQuery);
+        
+        for (const objDoc of objectivesSnapshot.docs) {
+          const objData = objDoc.data();
+          const endDate = objData.endDate?.toDate();
+          if (endDate && endDate >= now) {
+            const isBarberObjective = objData.barberoId && objData.barberoId === record.barberId;
+            const isGeneralObjective = !objData.barberoId;
+            
+            if (isBarberObjective || isGeneralObjective) {
+              const amountToDeduct = isBarberObjective ? record.barberShare : record.totalAmount;
+              await updateDoc(doc(db, "objectives", objDoc.id), {
+                currentAmount: increment(-amountToDeduct)
+              });
+            }
+          }
+        }
+      } catch (objError) {
+        console.error("Error revirtiendo objetivos:", objError);
+      }
+
+      // 6. Eliminar el documento de finances
+      await deleteDoc(doc(db, "finances", record.id));
+
+    } catch (error) {
+      console.error("Error al eliminar el registro:", error);
+      alert("Hubo un error al eliminar.");
+    }
+  };
+
+  const openEditModal = (record: FinancialRecord) => {
+    setRecordToEdit(record);
+    setFormData({
+      serviceId: record.serviceId,
+      clientName: record.clientName,
+      barberId: record.barberId
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Guardar edición
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recordToEdit) return;
+
+    if (!formData.serviceId || (esAdmin && !formData.barberId)) {
+      alert("Completa todos los campos obligatorios.");
+      return;
+    }
+
+    const selService = serviciosDisponibles.find(s => s.id === formData.serviceId);
+    if (!selService) return;
+
+    const finalBarberId = esAdmin ? formData.barberId : recordToEdit.barberId;
+    const finalBarberName = esAdmin 
+      ? (barbers.find(b => b.id === formData.barberId)?.name || recordToEdit.barberName) 
+      : recordToEdit.barberName;
+
+    const newTotalAmount = selService.price;
+    const newBarberShare = newTotalAmount * 0.6;
+    const newBarberiaShare = newTotalAmount * 0.4;
+    
+    try {
+      // Si cambia el monto o el barbero, hacemos reversiones de banco
+      if (finalBarberId !== recordToEdit.barberId || newTotalAmount !== recordToEdit.totalAmount) {
+        // --- 1. REVERTIR LO ANTIGUO ---
+        const oldBarberBankRef = doc(db, "bank", recordToEdit.barberId);
+        const oldBarberBankDoc = await getDoc(oldBarberBankRef);
+        if (oldBarberBankDoc.exists()) {
+          await updateDoc(oldBarberBankRef, { 
+            balance: increment(-recordToEdit.barberShare), 
+            totalEarned: increment(-recordToEdit.barberShare) 
+          });
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: recordToEdit.barberId, 
+          userName: recordToEdit.barberName, 
+          type: "deduction", 
+          amount: recordToEdit.barberShare, 
+          description: `Ajuste (Edición de registro): Reversión ${recordToEdit.serviceName}`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        const oldBarberiaBankRef = doc(db, "bank", "barbershop");
+        const oldBarberiaBankDoc = await getDoc(oldBarberiaBankRef);
+        if (oldBarberiaBankDoc.exists()) {
+          await updateDoc(oldBarberiaBankRef, { 
+            balance: increment(-recordToEdit.barberiaShare), 
+            totalEarned: increment(-recordToEdit.barberiaShare) 
+          });
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: "barbershop", 
+          userName: "The Doctor Barber Shop", 
+          type: "deduction", 
+          amount: recordToEdit.barberiaShare, 
+          description: `Ajuste (Edición): Reversión ${recordToEdit.serviceName} (${recordToEdit.barberName})`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        // --- 2. APLICAR LO NUEVO ---
+        const newBarberBankRef = doc(db, "bank", finalBarberId);
+        const newBarberBankDoc = await getDoc(newBarberBankRef);
+        if (newBarberBankDoc.exists()) {
+          await updateDoc(newBarberBankRef, { balance: increment(newBarberShare), totalEarned: increment(newBarberShare) });
+        } else {
+          // rare case if barber has no bank, but ignore for simple flow
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: finalBarberId, 
+          userName: finalBarberName, 
+          type: "earning", 
+          amount: newBarberShare, 
+          description: `Ajuste (Nuevo): ${selService.name}`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        await updateDoc(oldBarberiaBankRef, { balance: increment(newBarberiaShare), totalEarned: increment(newBarberiaShare) });
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: "barbershop", 
+          userName: "The Doctor Barber Shop", 
+          type: "earning", 
+          amount: newBarberiaShare, 
+          description: `Ajuste (Nuevo): ${selService.name} (${finalBarberName})`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+        
+        // --- 3. AJUSTE DE OBJETIVOS (Simplificado: reversión bruta, aplicación bruta) ---
+        try {
+          const now = new Date();
+          const objectivesQuery = query(collection(db, "objectives"));
+          const objectivesSnapshot = await getDocs(objectivesQuery);
+          
+          for (const objDoc of objectivesSnapshot.docs) {
+            const objData = objDoc.data();
+            const endDate = objData.endDate?.toDate();
+            
+            if (endDate && endDate >= now) {
+              const isOldBarberObj = objData.barberoId === recordToEdit.barberId;
+              const isNewBarberObj = objData.barberoId === finalBarberId;
+              const isGeneralObj = !objData.barberoId;
+              
+              const oldDeduct = isOldBarberObj ? recordToEdit.barberShare : recordToEdit.totalAmount;
+              const newAdd = isNewBarberObj ? newBarberShare : newTotalAmount;
+
+              let diff = 0;
+              if (isGeneralObj) {
+                // Same objective applies for both before and after, just calculate difference
+                diff = newAdd - oldDeduct;
+                await updateDoc(doc(db, "objectives", objDoc.id), {
+                  currentAmount: increment(diff)
+                });
+              } else {
+                // Specific barber objective
+                if (isOldBarberObj && !isNewBarberObj) {
+                  // Left this barber, so deduct
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(-oldDeduct)
+                  });
+                } else if (!isOldBarberObj && isNewBarberObj) {
+                  // Arrived at this barber, so add
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(newAdd)
+                  });
+                } else if (isOldBarberObj && isNewBarberObj) {
+                  // Same barber, diff amount
+                  diff = newAdd - oldDeduct;
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(diff)
+                  });
+                }
+              }
+            }
+          }
+        } catch (objErr) {
+          console.log("Error ajustando objetivos", objErr);
+        }
+      }
+
+      // --- 4. ACTUALIZAR FINANCE RECORD ---
+      await updateDoc(doc(db, "finances", recordToEdit.id), {
+        serviceId: selService.id,
+        serviceName: selService.name,
+        barberId: finalBarberId,
+        barberName: finalBarberName,
+        clientName: formData.clientName,
+        totalAmount: newTotalAmount,
+        barberShare: newBarberShare,
+        barberiaShare: newBarberiaShare,
+      });
+
+      setIsEditModalOpen(false);
+      setRecordToEdit(null);
+
+    } catch (err) {
+      console.error("Error al actualizar:", err);
+      alert("Hubo un problema guardando la edición. Revisa la consola.");
+    }
+  };
 
   // Opciones dinámicas de filtros
   const opcionesBarberos = useMemo(() => {
@@ -208,7 +525,6 @@ export default function HistorialPage() {
 
         {/* Búsqueda y filtros avanzados */}
         <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3 items-center">
-          {/* Búsqueda */}
           <div className="md:flex-1">
             <SearchInput
               value={busqueda}
@@ -218,7 +534,6 @@ export default function HistorialPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Filtro barbero (solo admin) */}
             {esAdmin && (
               <div className="flex-1 sm:min-w-[170px]">
                 <Select
@@ -233,7 +548,6 @@ export default function HistorialPage() {
               </div>
             )}
 
-            {/* Filtro servicio */}
             <div className="flex-1 sm:min-w-[170px]">
               <Select
                 options={[
@@ -247,7 +561,6 @@ export default function HistorialPage() {
             </div>
           </div>
 
-          {/* Limpiar filtros */}
           {hayFiltrosActivos && (
             <button
               onClick={limpiarFiltros}
@@ -319,14 +632,12 @@ export default function HistorialPage() {
             Registros
           </h3>
           <span className="text-text-muted text-xs">
-            {registrosFiltrados.length}{" "}
-            resultado{registrosFiltrados.length !== 1 ? "s" : ""}
+            {registrosFiltrados.length} resultado{registrosFiltrados.length !== 1 ? "s" : ""}
           </span>
         </div>
 
         {registrosPagina.length > 0 ? (
           <>
-            {/* Vista de escritorio - Tabla */}
             <div className="hidden lg:block overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -340,6 +651,7 @@ export default function HistorialPage() {
                       {esAdmin ? "Barbero (60%)" : "Tu Parte"}
                     </TableHead>
                     <TableHead align="right">Barbería (40%)</TableHead>
+                    <TableHead align="center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -368,13 +680,30 @@ export default function HistorialPage() {
                       <TableCell className="text-right font-display text-blue-400 tracking-wider">
                         ${r.barberiaShare.toFixed(2)}
                       </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openEditModal(r)}
+                            className="p-1.5 rounded-md text-text-muted hover:text-white hover:bg-white/10 transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r)}
+                            className="p-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
 
-            {/* Vista móvil - Tarjetas */}
             <div className="lg:hidden divide-y divide-white/5">
               {registrosPagina.map((r) => (
                 <div key={r.id} className="p-4 space-y-4 hover:bg-surface-high/20 transition-colors">
@@ -387,10 +716,26 @@ export default function HistorialPage() {
                         {r.date}
                       </p>
                     </div>
-                    <div className="px-2 py-1 rounded bg-primary/10 border border-primary/20">
-                      <span className="text-white font-display text-sm tracking-wider">
-                        ${r.totalAmount.toFixed(2)}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className="px-2 py-1 rounded bg-primary/10 border border-primary/20">
+                        <span className="text-white font-display text-sm tracking-wider">
+                          ${r.totalAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openEditModal(r)}
+                          className="p-1.5 text-text-muted hover:text-white transition-colors"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r)}
+                          className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -437,12 +782,10 @@ export default function HistorialPage() {
               ))}
             </div>
 
-            {/* Paginación */}
             {totalPaginas > 1 && (
               <div className="p-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-text-muted text-xs text-center sm:text-left order-2 sm:order-1">
-                  Página {pagina} de {totalPaginas} &middot;{" "}
-                  {registrosFiltrados.length} registros
+                  Página {pagina} de {totalPaginas} &middot; {registrosFiltrados.length} registros
                 </p>
                 <div className="flex items-center gap-1.5 order-1 sm:order-2">
                   <button
@@ -502,6 +845,68 @@ export default function HistorialPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL DE EDICIÓN */}
+      {isEditModalOpen && recordToEdit && (
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+            <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Editar Registro</h2>
+            
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              {esAdmin && (
+                <div>
+                  <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Barbero</label>
+                  <Select
+                    options={barbers.map(b => ({ value: b.id, label: b.name }))}
+                    value={formData.barberId}
+                    onChange={(val: string) => setFormData({ ...formData, barberId: val })}
+                    placeholder="Elegir barbero..."
+                    className="bg-void/50 border-white/10 rounded-md"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Servicio</label>
+                <Select
+                  options={serviciosDisponibles.map(s => ({ value: s.id, label: `$${s.price.toFixed(2)} - ${s.name}` }))}
+                  value={formData.serviceId}
+                  onChange={(val: string) => setFormData({ ...formData, serviceId: val })}
+                  placeholder="Seleccionar servicio..."
+                  className="bg-void/50 border-white/10 rounded-md"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Cliente</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none placeholder:text-text-muted/50"
+                  placeholder="Nombre del cliente"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                />
+              </div>
+              
+              <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 btn-primary text-sm py-3"
+                >
+                  <Check size={18} /> Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

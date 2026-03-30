@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { type FinancialRecord } from "@/lib/types";
+import { startOfWeek, endOfWeek, format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { 
   collection, 
   onSnapshot,
@@ -104,27 +106,42 @@ export default function EstadisticasPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const dailyStats = filteredRecords.reduce((acc, r) => {
-    if (!acc[r.date]) {
-      acc[r.date] = {
+  const weeklyStats = filteredRecords.reduce((acc, r) => {
+    const fecha = parseISO(r.date);
+    const inicioId = format(startOfWeek(fecha, { weekStartsOn: 1 }), "yyyy-MM-dd");
+    
+    if (!acc[inicioId]) {
+      acc[inicioId] = {
+        label: `${format(startOfWeek(fecha, { weekStartsOn: 1 }), "dd MMM", { locale: es })} - ${format(endOfWeek(fecha, { weekStartsOn: 1 }), "dd MMM", { locale: es })}`,
         total: 0,
         barbero: 0,
         barberia: 0,
       };
     }
 
-    acc[r.date].total += r.totalAmount;
-    acc[r.date].barbero += r.barberShare;
-    acc[r.date].barberia += r.barberiaShare;
+    acc[inicioId].total += r.totalAmount;
+    acc[inicioId].barbero += r.barberShare;
+    acc[inicioId].barberia += r.barberiaShare;
 
     return acc;
-  }, {} as Record<string, { total: number; barbero: number; barberia: number }>);
+  }, {} as Record<string, { label: string; total: number; barbero: number; barberia: number }>);
 
   const topService = Object.entries(servicesByType).sort((a, b) => b[1] - a[1])[0];
   const topBarber = Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1])[0];
 
-  const maxDailyBarbero = Math.max(...Object.values(dailyStats).map((stats) => stats.barbero), 0);
-  const maxDailyBarberia = Math.max(...Object.values(dailyStats).map((stats) => stats.barberia), 0);
+  const maxWeeklyBarbero = Math.max(...Object.values(weeklyStats).map((stats) => stats.barbero), 0);
+  const maxWeeklyBarberia = Math.max(...Object.values(weeklyStats).map((stats) => stats.barberia), 0);
+  
+  // Para mantener compatibilidad con otras partes si se usan
+  const dailyStats = filteredRecords.reduce((acc, r) => {
+    if (!acc[r.date]) {
+      acc[r.date] = { total: 0, barbero: 0, barberia: 0 };
+    }
+    acc[r.date].total += r.totalAmount;
+    acc[r.date].barbero += r.barberShare;
+    acc[r.date].barberia += r.barberiaShare;
+    return acc;
+  }, {} as Record<string, { total: number; barbero: number; barberia: number }>);
 
   return (
     <div className="space-y-8">
@@ -260,25 +277,25 @@ export default function EstadisticasPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
           <div>
             <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
-              Ingresos por <span className="text-primary">jornada</span>
+              Ingresos por <span className="text-primary">semana</span>
             </h3>
             <p className="text-text-muted text-sm">
-              Comparativa diaria entre lo generado para el barbero y lo correspondiente a la barbería.
+              Comparativa semanal entre lo generado para el barbero y lo correspondiente a la barbería.
             </p>
           </div>
         </div>
 
         <div className="space-y-5">
-          {Object.entries(dailyStats)
+          {Object.entries(weeklyStats)
             .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([date, amount]) => (
-              <div key={date} className="rounded-xl border border-white/5 bg-void/30 p-4 sm:p-5">
+            .map(([weekId, data]) => (
+              <div key={weekId} className="rounded-xl border border-white/5 bg-void/30 p-4 sm:p-5">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
                   <span className="text-text-muted text-[11px] font-medium uppercase tracking-[0.15em]">
-                    {date}
+                    Semana {data.label}
                   </span>
                   <span className="text-white font-display text-lg tracking-wider">
-                    Total ${amount.total.toFixed(2)}
+                    Total ${data.total.toFixed(2)}
                   </span>
                 </div>
 
@@ -290,11 +307,11 @@ export default function EstadisticasPage() {
                     <div className="h-3 bg-surface-high rounded-full overflow-hidden border border-white/5">
                       <div
                         className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxDailyBarbero > 0 ? (amount.barbero / maxDailyBarbero) * 100 : 0}%` }}
+                        style={{ width: `${maxWeeklyBarbero > 0 ? (data.barbero / maxWeeklyBarbero) * 100 : 0}%` }}
                       />
                     </div>
                     <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${amount.barbero.toFixed(2)}
+                      ${data.barbero.toFixed(2)}
                     </span>
                   </div>
 
@@ -305,11 +322,11 @@ export default function EstadisticasPage() {
                     <div className="h-3 bg-surface-high rounded-full overflow-hidden border border-white/5">
                       <div
                         className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxDailyBarberia > 0 ? (amount.barberia / maxDailyBarberia) * 100 : 0}%` }}
+                        style={{ width: `${maxWeeklyBarberia > 0 ? (data.barberia / maxWeeklyBarberia) * 100 : 0}%` }}
                       />
                     </div>
                     <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${amount.barberia.toFixed(2)}
+                      ${data.barberia.toFixed(2)}
                     </span>
                   </div>
                 </div>

@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
   where,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -18,7 +19,18 @@ import {
   increment
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, Users, Wallet, Plus, Check, Scissors, TrendingUp } from "lucide-react";
+import { 
+  DollarSign, 
+  Users, 
+  Wallet, 
+  Plus, 
+  Check, 
+  Scissors, 
+  TrendingUp,
+  Pencil,
+  Trash2,
+  X
+} from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
 
@@ -40,10 +52,14 @@ export default function FinanzasPage() {
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("month");
+  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
+
+  // Estado para Edición
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
 
   useEffect(() => {
     if (!userRole?.uid) {
@@ -346,6 +362,259 @@ export default function FinanzasPage() {
     }
   };
 
+  const handleDelete = async (record: FinancialRecord) => {
+    if (!window.confirm("¿Estás seguro de eliminar este registro? Se revertirán los saldos de ganancias asociados.")) return;
+
+    try {
+      // 1. Revertir saldo del barbero
+      const barberBankRef = doc(db, "bank", record.barberId);
+      const barberBankDoc = await getDoc(barberBankRef);
+      if (barberBankDoc.exists()) {
+        await updateDoc(barberBankRef, {
+          balance: increment(-record.barberShare),
+          totalEarned: increment(-record.barberShare),
+          lastUpdated: new Date()
+        });
+      }
+
+      // 2. Transacción de reversión del barbero
+      await addDoc(collection(db, "bank_transactions"), {
+        userId: record.barberId,
+        userName: record.barberName,
+        type: "deduction",
+        amount: record.barberShare,
+        description: `Eliminación/Reversión: ${record.serviceName}`,
+        date: new Date().toISOString().split("T")[0],
+        createdAt: new Date()
+      });
+
+      // 3. Revertir saldo de barbería
+      const barberiaBankRef = doc(db, "bank", "barbershop");
+      const barberiaBankDoc = await getDoc(barberiaBankRef);
+      if (barberiaBankDoc.exists()) {
+        await updateDoc(barberiaBankRef, {
+          balance: increment(-record.barberiaShare),
+          totalEarned: increment(-record.barberiaShare),
+          lastUpdated: new Date()
+        });
+      }
+
+      // 4. Transacción de reversión de barbería
+      await addDoc(collection(db, "bank_transactions"), {
+        userId: "barbershop",
+        userName: "The Doctor Barber Shop",
+        type: "deduction",
+        amount: record.barberiaShare,
+        description: `Eliminación/Reversión: ${record.serviceName} (${record.barberName})`,
+        date: new Date().toISOString().split("T")[0],
+        createdAt: new Date()
+      });
+
+      // 5. Ajustar objetivos (si aplican)
+      try {
+        const now = new Date();
+        const objectivesQuery = query(collection(db, "objectives"));
+        const objectivesSnapshot = await getDocs(objectivesQuery);
+        
+        for (const objDoc of objectivesSnapshot.docs) {
+          const objData = objDoc.data();
+          const endDate = objData.endDate?.toDate();
+          if (endDate && endDate >= now) {
+            const isBarberObjective = objData.barberoId && objData.barberoId === record.barberId;
+            const isGeneralObjective = !objData.barberoId;
+            
+            if (isBarberObjective || isGeneralObjective) {
+              const amountToDeduct = isBarberObjective ? record.barberShare : record.totalAmount;
+              await updateDoc(doc(db, "objectives", objDoc.id), {
+                currentAmount: increment(-amountToDeduct)
+              });
+            }
+          }
+        }
+      } catch (objError) {
+        console.error("Error revirtiendo objetivos:", objError);
+      }
+
+      // 6. Eliminar el documento de finances
+      await deleteDoc(doc(db, "finances", record.id));
+
+    } catch (error) {
+      console.error("Error al eliminar el registro:", error);
+      alert("Hubo un error al eliminar.");
+    }
+  };
+
+  const openEditModal = (record: FinancialRecord) => {
+    setRecordToEdit(record);
+    setFormData({
+      serviceId: record.serviceId,
+      clientName: record.clientName,
+      barberId: record.barberId
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recordToEdit) return;
+
+    if (!formData.serviceId || (isAdmin && !formData.barberId)) {
+      alert("Completa todos los campos obligatorios.");
+      return;
+    }
+
+    const selService = serviciosDisponibles.find(s => s.id === formData.serviceId);
+    if (!selService) return;
+
+    const finalBarberId = isAdmin ? formData.barberId : recordToEdit.barberId;
+    const finalBarber = isAdmin && formData.barberId 
+      ? (barbers.find(b => b.id === formData.barberId) || { name: recordToEdit.barberName })
+      : { name: recordToEdit.barberName };
+    
+    const finalBarberName = finalBarber.name;
+
+    const newTotalAmount = selService.price;
+    const newBarberShare = newTotalAmount * 0.6;
+    const newBarberiaShare = newTotalAmount * 0.4;
+    
+    try {
+      // Si cambia el monto o el barbero, hacemos reversiones de banco
+      if (finalBarberId !== recordToEdit.barberId || newTotalAmount !== recordToEdit.totalAmount) {
+        // --- 1. REVERTIR LO ANTIGUO ---
+        const oldBarberBankRef = doc(db, "bank", recordToEdit.barberId);
+        const oldBarberBankDoc = await getDoc(oldBarberBankRef);
+        if (oldBarberBankDoc.exists()) {
+          await updateDoc(oldBarberBankRef, { 
+            balance: increment(-recordToEdit.barberShare), 
+            totalEarned: increment(-recordToEdit.barberShare) 
+          });
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: recordToEdit.barberId, 
+          userName: recordToEdit.barberName, 
+          type: "deduction", 
+          amount: recordToEdit.barberShare, 
+          description: `Ajuste (Edición de registro): Reversión ${recordToEdit.serviceName}`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        const oldBarberiaBankRef = doc(db, "bank", "barbershop");
+        const oldBarberiaBankDoc = await getDoc(oldBarberiaBankRef);
+        if (oldBarberiaBankDoc.exists()) {
+          await updateDoc(oldBarberiaBankRef, { 
+            balance: increment(-recordToEdit.barberiaShare), 
+            totalEarned: increment(-recordToEdit.barberiaShare) 
+          });
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: "barbershop", 
+          userName: "The Doctor Barber Shop", 
+          type: "deduction", 
+          amount: recordToEdit.barberiaShare, 
+          description: `Ajuste (Edición): Reversión ${recordToEdit.serviceName} (${recordToEdit.barberName})`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        // --- 2. APLICAR LO NUEVO ---
+        const newBarberBankRef = doc(db, "bank", finalBarberId);
+        const newBarberBankDoc = await getDoc(newBarberBankRef);
+        if (newBarberBankDoc.exists()) {
+          await updateDoc(newBarberBankRef, { balance: increment(newBarberShare), totalEarned: increment(newBarberShare) });
+        } else {
+          // rare case if barber has no bank
+        }
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: finalBarberId, 
+          userName: finalBarberName, 
+          type: "earning", 
+          amount: newBarberShare, 
+          description: `Ajuste (Nuevo): ${selService.name}`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+
+        await updateDoc(oldBarberiaBankRef, { balance: increment(newBarberiaShare), totalEarned: increment(newBarberiaShare) });
+        await addDoc(collection(db, "bank_transactions"), { 
+          userId: "barbershop", 
+          userName: "The Doctor Barber Shop", 
+          type: "earning", 
+          amount: newBarberiaShare, 
+          description: `Ajuste (Nuevo): ${selService.name} (${finalBarberName})`, 
+          date: new Date().toISOString().split("T")[0], 
+          createdAt: new Date() 
+        });
+        
+        // --- 3. AJUSTE DE OBJETIVOS ---
+        try {
+          const now = new Date();
+          const objectivesQuery = query(collection(db, "objectives"));
+          const objectivesSnapshot = await getDocs(objectivesQuery);
+          
+          for (const objDoc of objectivesSnapshot.docs) {
+            const objData = objDoc.data();
+            const endDate = objData.endDate?.toDate();
+            
+            if (endDate && endDate >= now) {
+              const isOldBarberObj = objData.barberoId === recordToEdit.barberId;
+              const isNewBarberObj = objData.barberoId === finalBarberId;
+              const isGeneralObj = !objData.barberoId;
+              
+              const oldDeduct = isOldBarberObj ? recordToEdit.barberShare : recordToEdit.totalAmount;
+              const newAdd = isNewBarberObj ? newBarberShare : newTotalAmount;
+
+              let diff = 0;
+              if (isGeneralObj) {
+                diff = newAdd - oldDeduct;
+                await updateDoc(doc(db, "objectives", objDoc.id), {
+                  currentAmount: increment(diff)
+                });
+              } else {
+                if (isOldBarberObj && !isNewBarberObj) {
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(-oldDeduct)
+                  });
+                } else if (!isOldBarberObj && isNewBarberObj) {
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(newAdd)
+                  });
+                } else if (isOldBarberObj && isNewBarberObj) {
+                  diff = newAdd - oldDeduct;
+                  await updateDoc(doc(db, "objectives", objDoc.id), {
+                    currentAmount: increment(diff)
+                  });
+                }
+              }
+            }
+          }
+        } catch (objErr) {
+          console.log("Error ajustando objetivos", objErr);
+        }
+      }
+
+      // --- 4. ACTUALIZAR FINANCE RECORD ---
+      await updateDoc(doc(db, "finances", recordToEdit.id), {
+        serviceId: selService.id,
+        serviceName: selService.name,
+        barberId: finalBarberId,
+        barberName: finalBarberName,
+        clientName: formData.clientName,
+        totalAmount: newTotalAmount,
+        barberShare: newBarberShare,
+        barberiaShare: newBarberiaShare,
+      });
+
+      setIsEditModalOpen(false);
+      setRecordToEdit(null);
+      setFormData({ serviceId: "", clientName: "", barberId: "" });
+
+    } catch (err) {
+      console.error("Error al actualizar:", err);
+      alert("Hubo un problema guardando la edición.");
+    }
+  };
+
   const revenueByService = filteredRecords.reduce((acc, r) => {
     acc[r.serviceName] = (acc[r.serviceName] || 0) + r.totalAmount;
     return acc;
@@ -565,6 +834,7 @@ export default function FinanzasPage() {
                 <TableHead align="right">Total</TableHead>
                 <TableHead align="right">{isAdmin ? "Barbero (60%)" : "Tu Parte"}</TableHead>
                 <TableHead align="right">Barbería (40%)</TableHead>
+                <TableHead align="center">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -577,6 +847,24 @@ export default function FinanzasPage() {
                   <TableCell className="text-white text-right font-display tracking-widest">${record.totalAmount.toFixed(2)}</TableCell>
                   <TableCell className="text-emerald-400 text-right font-display tracking-widest">${record.barberShare.toFixed(2)}</TableCell>
                   <TableCell className="text-blue-400 text-right font-display tracking-widest">${record.barberiaShare.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => openEditModal(record)}
+                        className="p-1.5 rounded-md text-text-muted hover:text-white hover:bg-white/10 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(record)}
+                        className="p-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -595,8 +883,22 @@ export default function FinanzasPage() {
                   </div>
                   <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.15em] font-bold">{record.serviceName}</p>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-col items-end gap-2">
                   <p className="font-display text-2xl text-white tracking-widest leading-none">${record.totalAmount.toFixed(2)}</p>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openEditModal(record)}
+                      className="p-1.5 text-text-muted hover:text-white transition-colors"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(record)}
+                      className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -684,6 +986,63 @@ export default function FinanzasPage() {
                   className="flex-1 btn-primary text-sm py-3"
                 >
                   <Check size={18} /> Registrar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-premium p-8 w-full max-w-md border-primary/20 shadow-red-strong">
+            <h2 className="font-display text-3xl text-white mb-8 tracking-widest uppercase">Editar Registro</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              {isAdmin && (
+                <div>
+                  <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Barbero</label>
+                  <Select
+                    options={barbers.map(b => ({ value: b.id, label: b.name }))}
+                    value={formData.barberId}
+                    onChange={(val: string) => setFormData({ ...formData, barberId: val })}
+                    placeholder="Elegir barbero..."
+                    className="bg-void/50 border-white/10 rounded-md"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Servicio</label>
+                <Select
+                  options={serviciosDisponibles.map(s => ({ value: s.id, label: `$${s.price.toFixed(2)} - ${s.name}` }))}
+                  value={formData.serviceId}
+                  onChange={(val: string) => setFormData({ ...formData, serviceId: val })}
+                  placeholder="Seleccionar servicio..."
+                  className="bg-void/50 border-white/10 rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">Cliente (opcional)</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-void/50 border border-white/10 rounded-md px-4 py-3 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all outline-none placeholder:text-text-muted/50"
+                  placeholder="Nombre del cliente"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-4 mt-8 pt-4 border-t border-white/5">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsEditModalOpen(false); setRecordToEdit(null); setFormData({ serviceId: "", clientName: "", barberId: "" }); }}
+                  className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 btn-primary text-sm py-3"
+                >
+                  <Check size={18} /> Guardar
                 </button>
               </div>
             </form>
