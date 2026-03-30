@@ -54,6 +54,7 @@ export interface Objective {
   type?: 'weekly' | 'monthly';
   barberoId?: string;
   startDate?: Date;
+  createdByName?: string;
 }
 
 export interface Appointment {

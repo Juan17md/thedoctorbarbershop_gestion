@@ -98,8 +98,8 @@ export default function ObjetivosPage() {
           startDate: convertirFecha(datos.startDate),
           endDate: convertirFecha(datos.endDate),
           createdAt: convertirFecha(datos.createdAt) ?? new Date(),
-        };
-      }) as Objective[];
+        } as unknown as Objective;
+      });
 
       setObjetivos(data);
     });
