@@ -138,7 +138,7 @@ export default function ServiciosPage() {
 
                 <div className="flex items-start justify-between gap-4 border-t border-white/6 pt-5">
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-display text-[1.9rem] leading-none tracking-wide text-white">
+                    <h3 className="font-display text-[1.9rem] leading-none tracking-wide text-white whitespace-normal break-words md:truncate">
                       {servicio.name}
                     </h3>
 
