@@ -69,19 +69,19 @@ export default function Sidebar({ collapsed, isOpen, onToggleCollapse, onClose }
       bg-surface/80 backdrop-blur-xl border-r border-border-subtle flex flex-col
       transition-all duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.1)
       ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      ${collapsed ? "w-20" : "w-64"}
+      ${collapsed ? "w-20" : "w-[min(90vw,420px)] lg:w-64"}
     `}>
       {/* Logo */}
       <div className="h-24 flex items-center justify-center border-b border-white/5 w-full">
         <img 
           src="https://ik.imagekit.io/h5w0cdkit/the_doctor_barber_shop/loogo1.png" 
           alt="The Doctor Barber Shop Logo" 
-          className={`transition-all duration-300 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] ${collapsed ? "w-10 h-10" : "h-14 w-auto max-w-[80%]"}`}
+          className={`transition-all duration-300 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] ${collapsed ? "w-10 h-10" : "h-16 lg:h-14 w-auto max-w-[80%]"}`}
         />
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 overflow-y-auto py-6 space-y-1 ${collapsed ? "px-2" : "px-3"}`}>
+      <nav className={`flex-1 overflow-y-auto py-4 lg:py-6 grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:space-y-1 ${collapsed ? "px-2" : "px-3"}`}>
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -92,10 +92,10 @@ export default function Sidebar({ collapsed, isOpen, onToggleCollapse, onClose }
               href={item.path}
               onClick={handleNavClick}
               className={`
-                w-full flex items-center gap-4 rounded-lg transition-all duration-300 group
-                ${collapsed ? "justify-center px-4 py-4" : "px-4 py-3"}
+                w-full flex items-center gap-3 lg:gap-4 rounded-lg transition-all duration-300 group
+                ${collapsed ? "justify-center px-4 py-4" : "px-3 py-2.5 lg:px-4 lg:py-3"}
                 ${isActive 
-                  ? "glass-premium text-primary border-r-2 border-primary bg-primary/5 shadow-red-glow" 
+                  ? "glass-premium text-primary border-r-2 border-primary bg-primary/5 shadow-[0_0_15px_rgba(255,0,0,0.1)] lg:shadow-red-glow" 
                   : "text-text-secondary hover:text-text-primary hover:bg-white/5"
                 }
               `}
