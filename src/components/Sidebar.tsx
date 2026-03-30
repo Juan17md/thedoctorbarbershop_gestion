@@ -65,7 +65,7 @@ export default function Sidebar({ collapsed, isOpen, onToggleCollapse, onClose }
 
   return (
     <aside className={`
-      fixed top-0 left-0 h-screen z-50
+      fixed top-0 left-0 h-dvh z-50
       bg-surface/80 backdrop-blur-xl border-r border-border-subtle flex flex-col
       transition-all duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.1)
       ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
@@ -113,7 +113,7 @@ export default function Sidebar({ collapsed, isOpen, onToggleCollapse, onClose }
       </nav>
 
       {/* User Profile Area */}
-      <div className="p-4 border-t border-white/5 mt-auto">
+      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-white/5 mt-auto">
         {collapsed ? (
           <div className="flex flex-col gap-4 items-center">
             <div className="w-10 h-10 rounded-full bg-surface-high border border-white/5 flex items-center justify-center text-primary font-display">
