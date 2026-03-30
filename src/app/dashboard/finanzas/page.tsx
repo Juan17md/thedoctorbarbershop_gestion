@@ -18,7 +18,7 @@ import {
   increment
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, Users, Wallet, Plus, Check } from "lucide-react";
+import { DollarSign, Users, Wallet, Plus, Check, Scissors, TrendingUp } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
 
@@ -28,6 +28,7 @@ interface Transaccion {
   concepto: string;
   monto: number;
   fechaString: string;
+  creadoAt?: any;
 }
 
 const normalizarNombreServicio = (nombre: string) => nombre.trim().toLowerCase();
@@ -38,7 +39,7 @@ export default function FinanzasPage() {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
-  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("day");
+  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("month");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "" });
@@ -128,11 +129,56 @@ export default function FinanzasPage() {
   const barberShare = filteredRecords.reduce((sum, r) => sum + r.barberShare, 0);
   const barberiaShare = filteredRecords.reduce((sum, r) => sum + r.barberiaShare, 0);
 
-  const ingresos = transacciones
+  // Global totals for Balance Neto
+  const globalBarberiaShare = records.reduce((sum, r) => sum + r.barberiaShare, 0);
+
+  const globalIngresos = transacciones
     .filter((t) => t.tipo === "acta")
     .reduce((acc, curr) => acc + curr.monto, 0);
 
-  const egresos = transacciones
+  const globalEgresos = transacciones
+    .filter((t) => t.tipo === "gasto")
+    .reduce((acc, curr) => acc + curr.monto, 0);
+
+  // Filtered transactions for period cards
+  const getFilteredTransacciones = () => {
+    const now = new Date();
+    
+    return transacciones.filter(t => {
+      if (!t.creadoAt) return true;
+      
+      let txDate: Date;
+      if (typeof t.creadoAt.toDate === 'function') {
+        txDate = t.creadoAt.toDate();
+      } else if (t.creadoAt instanceof Date) {
+        txDate = t.creadoAt;
+      } else {
+        return true;
+      }
+
+      const txDateStr = txDate.toISOString().split("T")[0];
+
+      if (periodFilter === "day") {
+        return txDateStr === selectedDate;
+      } else if (periodFilter === "week") {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        return txDate >= weekStart;
+      } else if (periodFilter === "month") {
+        return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+      }
+      return true;
+    });
+  };
+
+  const filteredTransacciones = getFilteredTransacciones();
+
+  const ingresos = filteredTransacciones
+    .filter((t) => t.tipo === "acta")
+    .reduce((acc, curr) => acc + curr.monto, 0);
+
+  const egresos = filteredTransacciones
     .filter((t) => t.tipo === "gasto")
     .reduce((acc, curr) => acc + curr.monto, 0);
 
@@ -265,85 +311,118 @@ export default function FinanzasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2 animate-fade-in-up">
-        <div className="flex flex-wrap gap-4 items-center delay-children-1">
-          <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
+        {/* Card Filtros Período (Bento Style) */}
+        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-3 lg:col-span-1">
+          <div>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-1">Vista General</p>
+            <h2 className="font-display text-2xl text-white mb-6 tracking-widest uppercase">Rendimiento del Período</h2>
+          </div>
+          
+          <div className="flex flex-col gap-4">
+            <div className="flex bg-void/50 rounded-lg p-1 border border-white/5 w-full">
+              <button 
+                onClick={() => setPeriodFilter("day")}
+                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+              >
+                Hoy
+              </button>
+              <button 
+                onClick={() => setPeriodFilter("week")}
+                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+              >
+                Semana
+              </button>
+              <button 
+                onClick={() => setPeriodFilter("month")}
+                className={`flex-1 px-3 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
+              >
+                Mes
+              </button>
+            </div>
+
+            {periodFilter === "day" && (
+              <div className="w-full">
+                <DatePicker
+                  value={selectedDate}
+                  onChange={(v) => setSelectedDate(v)}
+                  placeholder="Seleccionar fecha"
+                />
+              </div>
+            )}
+            
             <button 
-              onClick={() => setPeriodFilter("day")}
-              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary text-xs py-3 w-full flex items-center justify-center gap-2 mt-2"
             >
-              Hoy
-            </button>
-            <button 
-              onClick={() => setPeriodFilter("week")}
-              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
-            >
-              Semana
-            </button>
-            <button 
-              onClick={() => setPeriodFilter("month")}
-              className={`px-4 py-2 rounded-md font-display text-[13px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/15 text-white border border-primary shadow-red-glow" : "text-text-secondary hover:text-white border border-transparent"}`}
-            >
-              Mes
+              <Plus size={16} /> Registrar Servicio
             </button>
           </div>
-
-          {periodFilter === "day" && (
-            <DatePicker
-              value={selectedDate}
-              onChange={(v) => setSelectedDate(v)}
-              placeholder="Seleccionar fecha"
-            />
-          )}
         </div>
 
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="btn-primary text-sm py-2.5 px-6 whitespace-nowrap"
-        >
-          <Plus size={18} /> Registrar Servicio
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up delay-children-1">
-        <div className="card-premium p-6 border-l-4 border-l-primary/80">
-          <div className="flex items-center gap-3 mb-2">
-            <DollarSign size={24} className="text-primary" />
-            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">Servicios (Total)</span>
+        {/* Card Servicios Count */}
+        <div className="card-premium p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-void/50 border border-white/5 flex items-center justify-center text-primary shadow-inner">
+              <Scissors size={24} />
+            </div>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Servicios</p>
           </div>
-          <p className="font-display text-4xl text-white mt-4">${totalRevenue.toFixed(2)}</p>
-        </div>
-        
-        <div className="card-premium p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Users size={24} className="text-blue-400" />
-            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">{isAdmin ? "Para Barberos (60%)" : "Tu Parte (60%)"}</span>
+          <div className="mt-auto">
+            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">{filteredRecords.length}</p>
+            <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2 flex items-center gap-1">
+              <TrendingUp size={10} className="text-emerald-500" /> Total Realizados
+            </p>
           </div>
-          <p className="font-display text-4xl text-white mt-4">${barberShare.toFixed(2)}</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Wallet size={24} className="text-emerald-400" />
-            <span className="text-text-secondary font-display text-sm tracking-widest uppercase">Para Barbería (40%)</span>
+        {/* Card Ingreso Barbero (60%) / Tu Parte */}
+        <div className="card-premium p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
+              <DollarSign size={24} />
+            </div>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">{isAdmin ? "Ingreso Barberos" : "Tu Parte"}</p>
           </div>
-          <p className="font-display text-4xl text-white mt-4">${barberiaShare.toFixed(2)}</p>
+          <div className="mt-auto">
+            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${barberShare.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{barberShare.toFixed(2).split('.')[1]}</span></p>
+            <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">60% de Comisiones</p>
+          </div>
         </div>
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-fade-in-up">
           <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
-            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Ingresos (Actas)</p>
-            <p className="font-display text-3xl text-white">${ingresos.toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Ingresos (Actas)</p>
+            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-red-500/80">
-            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Egresos (Gastos)</p>
-            <p className="font-display text-3xl text-white">${egresos.toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Egresos (Gastos)</p>
+            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-primary">
-            <p className="text-text-secondary font-display text-sm tracking-widest uppercase mb-4">Balance Neto</p>
-            <p className="font-display text-3xl text-white">${(ingresos - egresos).toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-4">Barbería (40%)</p>
+            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${barberiaShare.toFixed(2)}</p>
+          </div>
+          
+          <div className="card-premium p-6 border border-primary/30 sm:col-span-3 bg-primary/5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <p className="text-text-secondary font-display text-xs tracking-widest uppercase mb-1">Balance Neto (Total)</p>
+                <p className="font-display text-5xl text-white font-bold tracking-tight leading-none">${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span></p>
+              </div>
+              <div className="flex border border-white/5 rounded-lg overflow-hidden bg-void/30 p-4 w-full sm:w-auto">
+                <div className="text-center px-4 border-r border-white/5">
+                  <p className="text-[10px] text-text-muted uppercase font-bold mb-1">Monto Total</p>
+                  <p className="font-display text-xl text-white">${totalRevenue.toFixed(2)}</p>
+                </div>
+                <div className="text-center px-4">
+                  <p className="text-[10px] text-text-muted uppercase font-bold mb-1">Diferencial</p>
+                  <p className="font-display text-xl text-primary">${(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -353,7 +432,9 @@ export default function FinanzasPage() {
           <div className="p-6 border-b border-white/5">
             <h3 className="font-display text-xl text-white tracking-widest uppercase">Ganancias por Servicio</h3>
           </div>
-          <div className="overflow-x-auto">
+          
+          {/* Vista Escritorio (Tabla) */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-0 hover:bg-transparent">
@@ -373,6 +454,21 @@ export default function FinanzasPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Vista Móvil (Tarjetas) */}
+          <div className="md:hidden divide-y divide-white/5">
+            {Object.entries(revenueByService).map(([service, amount]) => (
+              <div key={service} className="p-5 flex justify-between items-center bg-void/20">
+                <div>
+                  <p className="text-white font-medium text-sm tracking-wide">{service}</p>
+                  <p className="text-text-muted text-[10px] uppercase font-bold mt-1">{serviceCount[service]} cita{serviceCount[service] !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-lg text-primary tracking-widest">${amount.toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -380,7 +476,9 @@ export default function FinanzasPage() {
         <div className="p-6 border-b border-white/5">
           <h3 className="font-display text-xl text-white tracking-widest uppercase">Historial de Servicios</h3>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Vista Escritorio (Tabla) */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-0 hover:bg-transparent">
@@ -408,10 +506,54 @@ export default function FinanzasPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Vista Móvil (Tarjetas PREMIUM) */}
+        <div className="md:hidden divide-y divide-white/5">
+          {filteredRecords.slice(0, 20).map((record) => (
+            <div key={record.id} className="p-5 space-y-4 bg-void/10 hover:bg-void/30 transition-colors">
+              <div className="flex justify-between items-start gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-medium text-base tracking-wide">{record.clientName}</p>
+                    <span className="text-[10px] text-text-muted opacity-50 px-2 py-0.5 border border-white/10 rounded uppercase">{record.date}</span>
+                  </div>
+                  <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.15em] font-bold">{record.serviceName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-2xl text-white tracking-widest leading-none">${record.totalAmount.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Grid 60/40 Directo (Admin) */}
+              {isAdmin ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                    <p className="text-[9px] uppercase tracking-widest text-emerald-300 font-bold mb-1">Barbero (60%)</p>
+                    <p className="font-display text-lg text-emerald-400">${record.barberShare.toFixed(2)}</p>
+                    <p className="text-[8px] text-text-muted/60 mt-0.5 truncate">{record.barberName}</p>
+                  </div>
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                    <p className="text-[9px] uppercase tracking-widest text-blue-300 font-bold mb-1">Barbería (40%)</p>
+                    <p className="font-display text-lg text-blue-400">${record.barberiaShare.toFixed(2)}</p>
+                    <p className="text-[8px] text-text-muted/60 mt-0.5">Admin Shop</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-emerald-300 font-bold">Tu Parte (60%)</p>
+                  </div>
+                  <p className="font-display text-xl text-emerald-400">${record.barberShare.toFixed(2)}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
         {filteredRecords.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-text-muted">
             <Wallet size={48} className="text-surface-highest mb-4" />
-            <p className="text-sm font-display tracking-widest uppercase">No hay servicios en el período seleccionado</p>
+            <p className="text-sm font-display tracking-widest uppercase">No hay servicios registrados</p>
           </div>
         )}
       </div>

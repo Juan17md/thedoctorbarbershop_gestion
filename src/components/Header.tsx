@@ -91,8 +91,9 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           desc: "Ajustes y configuración"
         };
       case "/dashboard/reservas":
+      case "/dashboard/reservas/agenda":
         return {
-          title: <>AGENDA DE <span className="text-primary">CITAS</span></>,
+          title: <>CALENDARIO DE <span className="text-primary">CITAS</span></>,
           desc: "Gestiona las reservas y el calendario de la barbería"
         };
       case "/dashboard/objetivos":

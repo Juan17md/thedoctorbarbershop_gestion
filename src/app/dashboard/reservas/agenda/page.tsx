@@ -224,7 +224,7 @@ export default function AgendaReservasPage() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
           <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-primary/80">
-            Agenda de reservas
+            Calendario de citas
           </p>
           <h1 className="font-display text-3xl uppercase tracking-[0.18em] text-white">
             {capitalizar(format(mesActual, "MMMM yyyy", { locale: es }))}

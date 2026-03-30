@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("today");
 
   useEffect(() => {
     let q;
@@ -53,6 +54,9 @@ export default function DashboardPage() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
+  const filteredRecords = timeFilter === "today" ? todayRecords : timeFilter === "week" ? weekRecords : monthRecords;
+  const filterLabel = timeFilter === "today" ? "HOY" : timeFilter === "week" ? "SEMANA" : "MES";
+
   const dailyRevenue = todayRecords.reduce((sum, r) => sum + r.totalAmount, 0);
   const weeklyRevenue = weekRecords.reduce((sum, r) => sum + r.totalAmount, 0);
   const monthlyRevenue = monthRecords.reduce((sum, r) => sum + r.totalAmount, 0);
@@ -63,12 +67,12 @@ export default function DashboardPage() {
   const totalServices = records.length;
   const todayServices = todayRecords.length;
 
-  const revenueByBarber = isAdmin ? records.reduce((acc, r) => {
+  const revenueByBarber = isAdmin ? filteredRecords.reduce((acc, r) => {
     acc[r.barberName] = (acc[r.barberName] || 0) + r.totalAmount;
     return acc;
   }, {} as Record<string, number>) : {};
 
-  const topBarber = Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1])[0];
+  const topBarbers = Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1]);
 
   if (loading) {
     return (
@@ -93,18 +97,18 @@ export default function DashboardPage() {
       <div className="space-y-8">
         
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 stagger-children">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
               <div key={i} className="card-premium p-4 sm:p-6 group">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-surface-high flex items-center justify-center border border-white/5 group-hover:border-primary/50 transition-colors">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-surface-high flex items-center justify-center border border-white/5 group-hover:border-primary/50 transition-colors">
                     <Icon size={20} className={stat.color} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-text-muted text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-70">{stat.name}</p>
+                  <p className="text-text-muted text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-70">{stat.name}</p>
                   <h3 className="font-display text-3xl sm:text-5xl text-text-primary tracking-tight leading-none group-hover:scale-110 transition-transform origin-left duration-500">{stat.value}</h3>
                 </div>
               </div>
@@ -114,12 +118,29 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-6">
           <div className="card-premium p-4 sm:p-6">
-            <h3 className="font-display text-lg sm:text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
-              <Wallet size={22} className="text-primary" />
-              DISTRIBUCIÓN DE GANANCIAS (HOY)
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h3 className="font-display text-lg sm:text-2xl text-text-primary flex items-center gap-3 tracking-[0.05em] uppercase">
+                <Wallet size={22} className="text-primary" />
+                DISTRIBUCIÓN DE GANANCIAS
+              </h3>
+              <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
+                {(["today", "week", "month"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setTimeFilter(filter)}
+                    className={`px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-bold transition-all ${
+                      timeFilter === filter
+                        ? "bg-primary text-white"
+                        : "text-text-muted hover:text-white"
+                    }`}
+                  >
+                    {filter === "today" ? "Hoy" : filter === "week" ? "Semana" : "Mes"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {(() => {
-              const earningsByBarber = todayRecords.reduce((acc, r) => {
+              const earningsByBarber = filteredRecords.reduce((acc, r) => {
                 if (!acc[r.barberName]) acc[r.barberName] = { share: 0, barberiaShare: 0, generated: 0, services: 0 };
                 acc[r.barberName].share += r.barberShare;
                 acc[r.barberName].barberiaShare += r.barberiaShare;
@@ -128,9 +149,8 @@ export default function DashboardPage() {
                 return acc;
               }, {} as Record<string, { share: number; barberiaShare: number; generated: number; services: number }>);
               const barberEntries = Object.entries(earningsByBarber);
-              const gridCols = "grid-cols-1";
               return (
-                <div className={`grid ${gridCols} gap-4`}>
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`}>
                   {barberEntries.map(([name, data]) => (
                     <div key={name} className="bg-surface-high/50 p-3 sm:p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
                       <div className="flex items-center gap-3 mb-5">
@@ -164,7 +184,7 @@ export default function DashboardPage() {
                   {barberEntries.length === 0 && (
                     <div className="col-span-full flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
                       <Wallet size={32} className="text-text-muted/30 mb-3" />
-                      <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas hoy</p>
+                      <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas {timeFilter === "today" ? "hoy" : timeFilter === "week" ? "esta semana" : "este mes"}</p>
                     </div>
                   )}
                 </div>
@@ -175,17 +195,26 @@ export default function DashboardPage() {
           <div className="card-premium p-6">
             <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
               <Users size={22} className="text-primary" />
-              TOP <span className="text-primary">BARBERO</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Día)</span>
+              RANKING <span className="text-primary">BARBEROS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">({filterLabel})</span>
             </h3>
-            {topBarber ? (
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-primary-muted flex items-center justify-center border border-primary/20">
-                  <Users size={24} className="text-primary" />
-                </div>
-                <div>
-                  <p className="font-display text-3xl text-text-primary leading-none tracking-wide">{topBarber[0].toUpperCase()}</p>
-                  <p className="text-emerald-400 font-display text-xl tracking-wider mt-1">${topBarber[1].toFixed(2)}</p>
-                </div>
+            {topBarbers.length > 0 ? (
+              <div className="space-y-3">
+                {topBarbers.map(([name, amount], index) => (
+                  <div key={name} className="flex items-center gap-4 p-3 rounded-lg bg-surface-high/30 border border-white/5">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg font-bold ${
+                      index === 0 ? "bg-amber-500/20 text-amber-400" :
+                      index === 1 ? "bg-gray-400/20 text-gray-300" :
+                      index === 2 ? "bg-amber-700/20 text-amber-600" :
+                      "bg-surface-high text-text-muted"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-display text-lg text-text-primary leading-none tracking-wide">{name.toUpperCase()}</p>
+                    </div>
+                    <p className="font-display text-xl text-emerald-400 tracking-wider">${amount.toFixed(2)}</p>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-text-muted">No hay datos disponibles</p>
@@ -195,7 +224,9 @@ export default function DashboardPage() {
 
         <div className="card-premium p-6">
           <h3 className="font-display text-2xl text-text-primary mb-6 tracking-[0.05em] uppercase">SERVICIOS <span className="text-primary">RECIENTES</span></h3>
-          <div className="overflow-x-auto">
+          
+          {/* Vista Escritorio (Tabla) */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-0 hover:bg-transparent">
@@ -225,6 +256,32 @@ export default function DashboardPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Vista Móvil (Tarjetas) */}
+          <div className="md:hidden divide-y divide-white/5 -mx-6 -mb-6 border-t border-white/5">
+            {todayRecords.slice(0, 5).map((r) => (
+              <div key={r.id} className="p-5 space-y-3">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1">
+                    <p className="text-white font-medium tracking-wide">{r.clientName}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-text-muted font-bold">Barbero: {r.barberName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-display text-xl text-primary tracking-widest">${r.totalAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-void/30 px-3 py-2 rounded-lg border border-white/5">
+                  <span className="text-text-secondary text-[10px] uppercase tracking-widest font-bold">{r.serviceName}</span>
+                  <span className="text-text-muted text-[10px]">{r.date}</span>
+                </div>
+              </div>
+            ))}
+            {todayRecords.length === 0 && (
+              <div className="py-12 text-center text-text-muted uppercase tracking-widest text-[11px] opacity-50">
+                No hay servicios hoy
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -306,19 +363,19 @@ export default function DashboardPage() {
     <div className="space-y-8">
       
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={i} className="card-premium p-6 hover:border-primary/30 transition-all duration-300 group">
+            <div key={i} className="card-premium p-4 sm:p-6 group">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 rounded-lg bg-surface-high flex items-center justify-center border border-border-subtle">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-surface-high flex items-center justify-center border border-border-subtle group-hover:border-primary/50 transition-colors">
                   <Icon size={20} className={stat.color} />
                 </div>
               </div>
               <div>
-                <p className="text-text-muted text-xs uppercase tracking-widest mb-1">{stat.name}</p>
-                <h3 className="font-display text-3xl text-text-primary">{stat.value}</h3>
+                <p className="text-text-muted text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-70">{stat.name}</p>
+                <h3 className="font-display text-3xl sm:text-5xl text-text-primary tracking-tight leading-none group-hover:scale-110 transition-transform origin-left duration-500">{stat.value}</h3>
               </div>
             </div>
           );
@@ -339,14 +396,14 @@ export default function DashboardPage() {
                 href={accion.href}
                 className={`group card-premium p-5 flex items-center gap-4 transition-all duration-300 border border-border-subtle ${accion.hoverCard}`}
               >
-                <div className={`w-12 h-12 rounded-xl ${accion.bgIcono} border ${accion.bordeIcono} flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110`}>
+                <div className={`w-12 h-12 rounded-xl ${accion.bgIcono} border ${accion.bordeIcono} flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110`}>
                   <Icono size={22} className={accion.colorIcono} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-display text-sm font-bold text-text-primary uppercase tracking-widest leading-tight">{accion.label}</p>
                   <p className="text-text-muted text-[11px] mt-1 leading-snug">{accion.descripcion}</p>
                 </div>
-                <ArrowRight size={16} className="text-text-muted group-hover:text-text-primary group-hover:translate-x-1 transition-all duration-300 flex-shrink-0" />
+                <ArrowRight size={16} className="text-text-muted group-hover:text-text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
               </Link>
             );
           })}
@@ -398,14 +455,19 @@ export default function DashboardPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
               <Wallet size={32} className="text-text-muted/30 mb-3" />
-              <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas hoy</p>
+              <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas {timeFilter === "today" ? "hoy" : timeFilter === "week" ? "esta semana" : "este mes"}</p>
             </div>
           )}
         </div>
 
         <div className="card-premium p-6">
-          <h3 className="font-display text-xl text-text-primary mb-4">Tus Servicios de Hoy</h3>
-          <div className="overflow-x-auto">
+          <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
+            <History size={22} className="text-primary" />
+            TUS SERVICIOS DE <span className="text-primary">HOY</span>
+          </h3>
+
+          {/* Vista Escritorio (Tabla) */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-0 hover:bg-transparent">
@@ -433,6 +495,32 @@ export default function DashboardPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Vista Móvil (Tarjetas) */}
+          <div className="md:hidden divide-y divide-white/5 -mx-6 -mb-6 border-t border-white/5">
+            {todayRecords.map((r) => (
+              <div key={r.id} className="p-5 space-y-3">
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <p className="text-white font-medium tracking-wide">{r.clientName}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-text-muted font-bold mt-1">{r.serviceName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-display text-xl text-emerald-400 tracking-widest">${r.barberShare.toFixed(2)}</p>
+                    <p className="text-[9px] uppercase tracking-tighter text-text-muted">(Tu parte 60%)</p>
+                  </div>
+                </div>
+                <div className="flex justify-end text-[10px] text-text-muted italic">
+                  {r.date}
+                </div>
+              </div>
+            ))}
+            {todayRecords.length === 0 && (
+              <div className="py-12 text-center text-text-muted uppercase tracking-widest text-[11px] opacity-50">
+                No has registrado servicios
+              </div>
+            )}
           </div>
         </div>
       </div>

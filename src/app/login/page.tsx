@@ -138,15 +138,11 @@ export default function LoginPage() {
         <div className="relative z-10 w-full max-w-sm sm:max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex flex-col items-center mb-12">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center glow-red mb-4">
-              <Scissors className="w-8 h-8 text-white" strokeWidth={1.8} />
-            </div>
-            <h1 className="font-hero text-4xl text-text-primary tracking-wide">
-              THE DOCTOR
-            </h1>
-            <p className="text-primary text-xs tracking-[0.4em] uppercase font-medium mt-1">
-              Barber Shop
-            </p>
+            <img 
+              src="https://ik.imagekit.io/h5w0cdkit/the_doctor_barber_shop/loogo1.png" 
+              alt="The Doctor Barber Shop Logo" 
+              className="h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+            />
           </div>
 
           {/* Desktop Welcome Text - Hidden on mobile */}
@@ -162,13 +158,13 @@ export default function LoginPage() {
           {/* Login Card */}
           <div className="bg-surface/60 backdrop-blur-xl border border-white/5 rounded-2xl p-8 sm:p-10">
             {/* Mobile Welcome Text */}
-            <div className="lg:hidden mb-8">
+            <div className="lg:hidden mb-8 text-center">
               <h2 className="font-display text-3xl text-text-primary tracking-wide mb-2">
-                INICIAR SESIÓN
+                BIENVENIDO
               </h2>
               <p className="text-text-muted text-sm">
-                Ingresa tus credenciales
-              </p>
+                Accede a tu panel de gestión  
+              </p>    
             </div>
 
             {error && (
@@ -218,7 +214,7 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-primary-light text-white font-semibold tracking-wide shadow-[0_10px_30px_rgba(139,0,0,0.35)] hover:scale-[1.01] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 group"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-primary-light text-white font-semibold tracking-wide shadow-[0_10px_30px_rgba(139,0,0,0.35)] hover:scale-[1.01] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
               >
                 {loading ? (
                   <>
@@ -226,10 +222,7 @@ export default function LoginPage() {
                     <span>Autenticando...</span>
                   </>
                 ) : (
-                  <>
-                    <span>INICIAR SESIÓN</span>
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
+                  <span>INICIAR SESIÓN</span>
                 )}
               </Button>
             </form>
@@ -238,7 +231,7 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-white/5">
             <p className="text-center text-xs text-text-muted">
-              © {new Date().getFullYear()} The Doctor Barber Shop
+              © 2026 The Doctor Barber Shop
             </p>
             <p className="text-center text-xs text-text-muted/60 mt-2 flex items-center justify-center gap-1">
               Designed by <span className="text-primary font-medium">Juan17md</span>

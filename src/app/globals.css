@@ -5,25 +5,11 @@
    The Doctor Barber Shop — Black, Red, White
    ======================================== */
 
-@font-face {
-  font-family: 'Anton';
-  src: url('https://fonts.gstatic.com/s/anton/v25/1Ptgg87GROyAm3K8-C8CSKlv.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
 
-@font-face {
-  font-family: 'Bebas Neue';
-  src: url('https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9WlhyyTh89Y.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Inter';
-  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZhrib2Bg-4.woff2') format('woff2');
-  font-weight: 300 900;
-  font-display: swap;
+:root {
+  --font-hero: "Anton", sans-serif;
+  --font-display: "Bebas Neue", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 @theme {
@@ -65,9 +51,10 @@
   --color-border-accent: rgba(161, 161, 170, 0.3);
   
   /* === Tipografía Urban — 3 niveles === */
-  --font-hero: 'Anton', Impact, sans-serif;
-  --font-display: 'Bebas Neue', 'Anton', Impact, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-hero: var(--font-hero);
+  --font-display: var(--font-display);
+  --font-secondary: var(--font-display);
+  --font-body: var(--font-body);
   
   /* === Radio === */
   --radius-sm: 0.25rem;

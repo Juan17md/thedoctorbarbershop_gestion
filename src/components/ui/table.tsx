@@ -53,7 +53,7 @@ export function TableHead({ className, align = "left", ...props }: TableHeadProp
       className={cn(
         "px-4 py-4 sm:px-6 sm:py-4 align-middle font-display text-xs sm:text-sm font-extrabold uppercase tracking-[0.12em]",
         "text-white bg-linear-to-r from-surface-high via-surface-high/95 to-surface-high/80",
-        "border-b border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl whitespace-nowrap",
+        "border-b border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl whitespace-normal md:whitespace-nowrap",
         "first:rounded-tl-xl last:rounded-tr-xl",
         align === "center" && "text-center",
         align === "right" && "text-right",
