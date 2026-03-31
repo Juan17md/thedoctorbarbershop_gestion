@@ -59,6 +59,10 @@ export default function FinanzasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para Eliminación
+  const [recordToDelete, setRecordToDelete] = useState<FinancialRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Actualizar la fecha seleccionada automáticamente a medianoche si el filtro es "hoy"
   useEffect(() => {
@@ -379,8 +383,15 @@ export default function FinanzasPage() {
     }
   };
 
-  const handleDelete = async (record: FinancialRecord) => {
-    if (!window.confirm("¿Estás seguro de eliminar este registro? Se revertirán los saldos de ganancias asociados.")) return;
+  const confirmDelete = (record: FinancialRecord) => {
+    setRecordToDelete(record);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+
+    setIsDeleting(true);
+    const record = recordToDelete;
 
     try {
       // 1. Revertir saldo del barbero
@@ -458,6 +469,9 @@ export default function FinanzasPage() {
     } catch (error) {
       console.error("Error al eliminar el registro:", error);
       alert("Hubo un error al eliminar.");
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
     }
   };
 
@@ -857,7 +871,7 @@ export default function FinanzasPage() {
                         <Pencil size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(record)}
+                        onClick={() => confirmDelete(record)}
                         className="p-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
                         title="Eliminar"
                       >
@@ -893,7 +907,7 @@ export default function FinanzasPage() {
                       <Pencil size={15} />
                     </button>
                     <button
-                      onClick={() => handleDelete(record)}
+                      onClick={() => confirmDelete(record)}
                       className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={15} />
@@ -1056,6 +1070,46 @@ export default function FinanzasPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {recordToDelete && (
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-md z-50 flex items-center justify-center p-4 min-h-dvh">
+          <div className="card-premium p-8 w-full max-w-sm border-red-500/20 shadow-[0_0_30px_-5px_rgba(239,68,68,0.2)] animate-scale-in">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500 shadow-inner">
+                <Trash2 size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-display text-2xl text-white tracking-widest uppercase">Eliminar Registro</h3>
+                <p className="text-text-secondary text-sm">
+                  ¿Estás seguro de eliminar el servicio de <span className="text-white font-medium">{recordToDelete.serviceName}</span> para <span className="text-white font-medium">{recordToDelete.clientName}</span>?
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-8 pt-6 border-t border-white/5">
+              <button 
+                type="button" 
+                onClick={() => setRecordToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5 hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 bg-red-500/90 hover:bg-red-500 text-white font-bold uppercase tracking-widest text-xs py-3 rounded-md shadow-[0_0_15px_-3px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <><Loader2 size={16} className="animate-spin" /> Eliminando...</>
+                ) : (
+                  <><Trash2 size={16} /> Eliminar</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
