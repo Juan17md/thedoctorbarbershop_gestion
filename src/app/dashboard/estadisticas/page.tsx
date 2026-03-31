@@ -10,7 +10,8 @@ import {
   onSnapshot,
   query,
   orderBy,
-  where
+  where,
+  getDocs
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { TrendingUp, Scissors, DollarSign, Activity } from "lucide-react";
@@ -20,7 +21,25 @@ export default function EstadisticasPage() {
   const { userRole, loading } = useAuth();
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
+  const [barbersList, setBarbersList] = useState<{uid: string, name: string}[]>([]);
   const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
+
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      try {
+        const querySnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "barber")));
+        const list = querySnapshot.docs.map(doc => ({
+          uid: doc.id,
+          name: doc.data().name || "Sin nombre"
+        }));
+        
+        setBarbersList(list);
+      } catch (error) {
+        console.error("Error al cargar barberos:", error);
+      }
+    };
+    fetchBarbers();
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -114,23 +133,44 @@ export default function EstadisticasPage() {
       acc[inicioId] = {
         label: `${format(startOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })} - ${format(endOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })}`,
         total: 0,
-        barbero: 0,
         barberia: 0,
+        barbers: {} as Record<string, { barberShare: number; barberiaShare: number; total: number }>
       };
     }
 
     acc[inicioId].total += r.totalAmount;
-    acc[inicioId].barbero += r.barberShare;
     acc[inicioId].barberia += r.barberiaShare;
 
+    if (!acc[inicioId].barbers[r.barberName]) {
+      acc[inicioId].barbers[r.barberName] = { barberShare: 0, barberiaShare: 0, total: 0 };
+    }
+    acc[inicioId].barbers[r.barberName].barberShare += r.barberShare;
+    acc[inicioId].barbers[r.barberName].barberiaShare += r.barberiaShare;
+    acc[inicioId].barbers[r.barberName].total += r.totalAmount;
+
     return acc;
-  }, {} as Record<string, { label: string; total: number; barbero: number; barberia: number }>);
+  }, {} as Record<string, { label: string; total: number; barberia: number; barbers: Record<string, { barberShare: number; barberiaShare: number; total: number }> }>);
+
+  // Asegurar que todos los barberos aparezcan en cada semana
+  Object.keys(weeklyStats).forEach(weekId => {
+    barbersList.forEach(barber => {
+      if (!weeklyStats[weekId].barbers[barber.name]) {
+        weeklyStats[weekId].barbers[barber.name] = { barberShare: 0, barberiaShare: 0, total: 0 };
+      }
+    });
+  });
+
+  const maxWeeklyValue = Math.max(
+    ...Object.values(weeklyStats).flatMap(stats => 
+      Object.entries(stats.barbers)
+        .filter(([name]) => barbersList.some(b => b.name === name))
+        .flatMap(([, b]) => [b.barberShare, b.barberiaShare])
+    ),
+    1
+  );
 
   const topService = Object.entries(servicesByType).sort((a, b) => b[1] - a[1])[0];
   const topBarber = Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1])[0];
-
-  const maxWeeklyBarbero = Math.max(...Object.values(weeklyStats).map((stats) => stats.barbero), 0);
-  const maxWeeklyBarberia = Math.max(...Object.values(weeklyStats).map((stats) => stats.barberia), 0);
   
   // Para mantener compatibilidad con otras partes si se usan
   const dailyStats = filteredRecords.reduce((acc, r) => {
@@ -285,12 +325,12 @@ export default function EstadisticasPage() {
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           {Object.entries(weeklyStats)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([weekId, data]) => (
               <div key={weekId} className="rounded-xl border border-white/5 bg-void/30 p-4 sm:p-5">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-6">
                   <span className="text-text-muted text-[11px] font-medium uppercase tracking-[0.15em]">
                     Semana {data.label}
                   </span>
@@ -299,36 +339,51 @@ export default function EstadisticasPage() {
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-[120px_1fr_110px] items-center gap-3">
-                    <span className="text-emerald-400 text-[11px] font-bold uppercase tracking-[0.18em]">
-                      Barbero
-                    </span>
-                    <div className="h-3 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                      <div
-                        className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxWeeklyBarbero > 0 ? (data.barbero / maxWeeklyBarbero) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${data.barbero.toFixed(2)}
-                    </span>
-                  </div>
+                <div className="space-y-8">
+                  {Object.entries(data.barbers)
+                    .filter(([name]) => barbersList.some(b => b.name === name))
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .map(([barberName, stats]) => (
+                      <div key={barberName} className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-px flex-1 bg-white/5"></div>
+                          <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
+                          <div className="h-px flex-1 bg-white/5"></div>
+                        </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-[120px_1fr_110px] items-center gap-3">
-                    <span className="text-cyan-400 text-[11px] font-bold uppercase tracking-[0.18em]">
-                      Barbería
-                    </span>
-                    <div className="h-3 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                      <div
-                        className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxWeeklyBarberia > 0 ? (data.barberia / maxWeeklyBarberia) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${data.barberia.toFixed(2)}
-                    </span>
-                  </div>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                            <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                              Personal
+                            </span>
+                            <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                              <div
+                                className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
+                                style={{ width: `${maxWeeklyValue > 0 ? (stats.barberShare / maxWeeklyValue) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                              ${stats.barberShare.toFixed(2)}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                            <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                              Barbería
+                            </span>
+                            <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                              <div
+                                className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
+                                style={{ width: `${maxWeeklyValue > 0 ? (stats.barberiaShare / maxWeeklyValue) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                              ${stats.barberiaShare.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             ))}
