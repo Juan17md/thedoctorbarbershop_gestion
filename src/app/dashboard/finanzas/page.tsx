@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
 
 interface Transaccion {
   id: string;
@@ -141,19 +141,16 @@ export default function FinanzasPage() {
   }, [isAdmin]);
 
   const getFilteredRecords = () => {
-    const now = new Date();
+    const startOfWeek = getStartOfWeekString();
+    const startOfMonth = getStartOfMonthString();
     
     return records.filter(record => {
       if (periodFilter === "day") {
         return record.date === selectedDate;
       } else if (periodFilter === "week") {
-        const recordDate = new Date(record.date);
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        return recordDate >= weekStart;
+        return record.date >= startOfWeek;
       } else if (periodFilter === "month") {
-        const recordDate = new Date(record.date);
-        return recordDate.getMonth() === now.getMonth() && recordDate.getFullYear() === now.getFullYear();
+        return record.date >= startOfMonth;
       }
       return true;
     });
@@ -161,30 +158,30 @@ export default function FinanzasPage() {
 
   const filteredRecords = getFilteredRecords();
 
-  const totalRevenue = filteredRecords.reduce((sum, r) => sum + r.totalAmount, 0);
-  const barberShare = filteredRecords.reduce((sum, r) => sum + r.barberShare, 0);
-  const barberiaShare = filteredRecords.reduce((sum, r) => sum + r.barberiaShare, 0);
+  const totalRevenue = filteredRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
+  const barberShare = filteredRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberShare, 0);
+  const barberiaShare = filteredRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberiaShare, 0);
 
   // Global totals for Balance Neto
-  const globalBarberiaShare = records.reduce((sum, r) => sum + r.barberiaShare, 0);
+  const globalBarberiaShare = records.reduce((sum: number, r: FinancialRecord) => sum + r.barberiaShare, 0);
 
   const globalIngresos = transacciones
     .filter((t) => t.tipo === "acta")
-    .reduce((acc, curr) => acc + curr.monto, 0);
+    .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
 
   const globalEgresos = transacciones
     .filter((t) => t.tipo === "gasto")
-    .reduce((acc, curr) => acc + curr.monto, 0);
+    .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
 
   // Filtered transactions for period cards
   const getFilteredTransacciones = () => {
-    const now = new Date();
+    const startOfWeek = getStartOfWeekString();
+    const startOfMonth = getStartOfMonthString();
     
     return transacciones.filter(t => {
-      if (!t.creadoAt) return true;
-      
+      // Usar la fecha de creación normalizada a Venezuela
       let txDate: Date;
-      if (typeof t.creadoAt.toDate === 'function') {
+      if (t.creadoAt?.toDate) {
         txDate = t.creadoAt.toDate();
       } else if (t.creadoAt instanceof Date) {
         txDate = t.creadoAt;
@@ -197,12 +194,9 @@ export default function FinanzasPage() {
       if (periodFilter === "day") {
         return txDateStr === selectedDate;
       } else if (periodFilter === "week") {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        return txDate >= weekStart;
+        return txDateStr >= startOfWeek;
       } else if (periodFilter === "month") {
-        return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+        return txDateStr >= startOfMonth;
       }
       return true;
     });
@@ -212,11 +206,11 @@ export default function FinanzasPage() {
 
   const ingresos = filteredTransacciones
     .filter((t) => t.tipo === "acta")
-    .reduce((acc, curr) => acc + curr.monto, 0);
+    .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
 
   const egresos = filteredTransacciones
     .filter((t) => t.tipo === "gasto")
-    .reduce((acc, curr) => acc + curr.monto, 0);
+    .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
 
   const handleRegisterService = async (e: React.FormEvent) => {
     e.preventDefault();

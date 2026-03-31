@@ -151,8 +151,8 @@ export default function AgendaReservasPage() {
   }, [reservas]);
 
   const diasCalendario = useMemo(() => {
-    const inicio = startOfWeek(startOfMonth(mesActual), { weekStartsOn: 1 });
-    const fin = endOfWeek(endOfMonth(mesActual), { weekStartsOn: 1 });
+    const inicio = startOfWeek(startOfMonth(mesActual), { weekStartsOn: 0 });
+    const fin = endOfWeek(endOfMonth(mesActual), { weekStartsOn: 0 });
 
     return eachDayOfInterval({ start: inicio, end: fin });
   }, [mesActual]);
@@ -294,7 +294,7 @@ export default function AgendaReservasPage() {
           </div>
 
           <div className="mt-6 grid grid-cols-7 gap-2">
-            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((dia) => (
+            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((dia) => (
               <div
                 key={dia}
                 className="px-2 pb-2 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-text-muted"

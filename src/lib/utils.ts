@@ -13,3 +13,17 @@ export function getLocalDateString(date: Date = new Date()): string {
     day: "2-digit",
   }).format(date);
 }
+
+export function getStartOfWeekString(date: Date = new Date()): string {
+  // Encontrar el domingo anterior usando la hora de Venezuela
+  const offsetDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Caracas" }));
+  const diff = offsetDate.getDay(); // 0 es Domingo
+  const sunday = new Date(offsetDate);
+  sunday.setDate(offsetDate.getDate() - diff);
+  return getLocalDateString(sunday);
+}
+
+export function getStartOfMonthString(date: Date = new Date()): string {
+  const result = getLocalDateString(date);
+  return `${result.substring(0, 7)}-01`;
+}

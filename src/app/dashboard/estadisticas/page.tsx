@@ -108,11 +108,11 @@ export default function EstadisticasPage() {
 
   const weeklyStats = filteredRecords.reduce((acc, r) => {
     const fecha = parseISO(r.date);
-    const inicioId = format(startOfWeek(fecha, { weekStartsOn: 1 }), "yyyy-MM-dd");
+    const inicioId = format(startOfWeek(fecha, { weekStartsOn: 0 }), "yyyy-MM-dd");
     
     if (!acc[inicioId]) {
       acc[inicioId] = {
-        label: `${format(startOfWeek(fecha, { weekStartsOn: 1 }), "dd MMM", { locale: es })} - ${format(endOfWeek(fecha, { weekStartsOn: 1 }), "dd MMM", { locale: es })}`,
+        label: `${format(startOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })} - ${format(endOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })}`,
         total: 0,
         barbero: 0,
         barberia: 0,

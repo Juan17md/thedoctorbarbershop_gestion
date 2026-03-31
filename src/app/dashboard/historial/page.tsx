@@ -42,7 +42,7 @@ import {
 } from "@/components/ui";
 import SearchInput from "@/components/ui/search-input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
 
 const ITEMS_POR_PAGINA = 15;
 
@@ -405,23 +405,13 @@ export default function HistorialPage() {
 
   // Registros filtrados
   const registrosFiltrados = useMemo(() => {
-    const ahora = new Date();
-    const hoyStr = getLocalDateString(ahora);
-    const inicioSemana = new Date(ahora);
-    inicioSemana.setDate(ahora.getDate() - ahora.getDay());
-    const inicioSemanaStr = getLocalDateString(inicioSemana);
+    const inicioSemanaStr = getStartOfWeekString();
+    const inicioMesStr = getStartOfMonthString();
 
     return registros.filter((r) => {
       if (periodo === "hoy" && r.date !== fechaSeleccionada) return false;
       if (periodo === "semana" && r.date < inicioSemanaStr) return false;
-      if (periodo === "mes") {
-        const d = new Date(r.date + "T00:00:00");
-        if (
-          d.getMonth() !== ahora.getMonth() ||
-          d.getFullYear() !== ahora.getFullYear()
-        )
-          return false;
-      }
+      if (periodo === "mes" && r.date < inicioMesStr) return false;
       if (esAdmin && filtroBarbero !== "todos" && r.barberName !== filtroBarbero)
         return false;
       if (filtroServicio !== "todos" && r.serviceName !== filtroServicio)
@@ -450,9 +440,9 @@ export default function HistorialPage() {
   );
 
   // Métricas del filtro actual
-  const totalIngresos = registrosFiltrados.reduce((s, r) => s + r.totalAmount, 0);
-  const totalBarbero = registrosFiltrados.reduce((s, r) => s + r.barberShare, 0);
-  const totalBarberia = registrosFiltrados.reduce((s, r) => s + r.barberiaShare, 0);
+  const totalIngresos = registrosFiltrados.reduce((s: number, r: FinancialRecord) => s + r.totalAmount, 0);
+  const totalBarbero = registrosFiltrados.reduce((s: number, r: FinancialRecord) => s + r.barberShare, 0);
+  const totalBarberia = registrosFiltrados.reduce((s: number, r: FinancialRecord) => s + r.barberiaShare, 0);
 
   const hayFiltrosActivos =
     busqueda || filtroBarbero !== "todos" || filtroServicio !== "todos";

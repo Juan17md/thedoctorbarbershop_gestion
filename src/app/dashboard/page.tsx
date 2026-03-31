@@ -14,7 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
@@ -46,17 +46,12 @@ export default function DashboardPage() {
   }, [isAdmin, userRole?.uid]);
 
   const today = getLocalDateString();
-  const startOfWeek = new Date();
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  const startOfWeekStr = getLocalDateString(startOfWeek);
+  const startOfWeekStr = getStartOfWeekString();
+  const startOfMonthStr = getStartOfMonthString();
 
   const todayRecords = records.filter(r => r.date === today);
   const weekRecords = records.filter(r => r.date >= startOfWeekStr);
-  const monthRecords = records.filter(r => {
-    const d = new Date(r.date);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
+  const monthRecords = records.filter(r => r.date >= startOfMonthStr);
 
   const filteredRecords = timeFilter === "today" ? todayRecords : timeFilter === "week" ? weekRecords : monthRecords;
   const rankingRecords = rankingFilter === "today" ? todayRecords : rankingFilter === "week" ? weekRecords : monthRecords;
@@ -64,17 +59,17 @@ export default function DashboardPage() {
   const filterLabel = timeFilter === "today" ? "HOY" : timeFilter === "week" ? "SEMANA" : "MES";
   const rankingLabel = rankingFilter === "today" ? "hoy" : rankingFilter === "week" ? "semana" : "mes";
 
-  const dailyRevenue = todayRecords.reduce((sum, r) => sum + r.totalAmount, 0);
-  const weeklyRevenue = weekRecords.reduce((sum, r) => sum + r.totalAmount, 0);
-  const monthlyRevenue = monthRecords.reduce((sum, r) => sum + r.totalAmount, 0);
+  const dailyRevenue = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
+  const weeklyRevenue = weekRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
+  const monthlyRevenue = monthRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
 
-  const barberDaily = todayRecords.reduce((sum, r) => sum + r.barberShare, 0);
-  const barberiaDaily = todayRecords.reduce((sum, r) => sum + r.barberiaShare, 0);
+  const barberDaily = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberShare, 0);
+  const barberiaDaily = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberiaShare, 0);
 
   const totalServices = records.length;
   const todayServices = todayRecords.length;
 
-  const revenueByBarber = isAdmin ? rankingRecords.reduce((acc, r) => {
+  const revenueByBarber = isAdmin ? rankingRecords.reduce((acc: Record<string, number>, r: FinancialRecord) => {
     acc[r.barberName] = (acc[r.barberName] || 0) + r.totalAmount;
     return acc;
   }, {} as Record<string, number>) : {};
