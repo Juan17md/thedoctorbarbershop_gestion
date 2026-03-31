@@ -621,32 +621,31 @@ export default function FinanzasPage() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 pb-10">
       {/* Cabecera Desktop */}
-      <div className="hidden lg:flex justify-between items-end mb-2">
+      <div className="hidden lg:flex justify-between items-center mb-0">
         <div>
-          <h1 className="font-display text-4xl text-white tracking-widest uppercase">Historial Financiero</h1>
+          <h1 className="font-display text-4xl text-white tracking-widest uppercase">Finanzas</h1>
           <p className="text-text-muted text-[10px] tracking-[0.3em] font-bold mt-1 opacity-70">CENTRO DE CONTROL Y RENDIMIENTO</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2 px-8 py-3.5 text-xs tracking-[0.2em] font-bold uppercase shadow-red-strong hover:-translate-y-0.5 transition-all"
+          className="btn-primary flex items-center gap-2 px-6 py-3 text-xs tracking-[0.2em] font-bold uppercase shadow-red-strong hover:-translate-y-0.5 transition-all"
         >
-          <Plus size={18} /> Registrar Servicio
+          <Plus size={16} /> Registrar Servicio
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {/* Card Filtros Período (Bento Style) */}
-        <div className="card-premium p-6 sm:p-8 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-3 lg:col-span-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-1 lg:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-1">Vista General</p>
-              <h2 className="font-display text-2xl text-white tracking-widest uppercase mb-1">Rendimiento</h2>
-              <p className="text-[9px] text-text-muted uppercase font-bold tracking-widest">Estadísticas actuales del negocio</p>
+              <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] mb-0.5">Control de Periodos</p>
+              <h2 className="font-display text-xl text-white tracking-widest uppercase">Rendimiento</h2>
             </div>
             
-            <div className="flex bg-void/50 rounded-lg p-1 border border-white/5 w-full sm:w-auto h-fit">
+            <div className="flex bg-void/50 rounded-lg p-0.5 border border-white/5 w-full sm:w-auto h-fit">
               <button 
                 onClick={() => setPeriodFilter("day")}
                 className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
@@ -722,55 +721,34 @@ export default function FinanzasPage() {
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">60% de Comisiones</p>
           </div>
         </div>
-      </div>
-
-      {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
+        {isAdmin && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up col-span-full">
           <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
-            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Ingresos (Actas)</p>
-            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Ingresos (Actas)</p>
+            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-red-500/80">
-            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Egresos (Gastos)</p>
-            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Egresos (Gastos)</p>
+            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-primary">
-            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-4 font-bold opacity-70">Barbería (40%)</p>
-            <p className="font-display text-4xl text-white font-bold tracking-tight leading-none">${barberiaShare.toFixed(2)}</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Barbería (40%)</p>
+            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${barberiaShare.toFixed(2)}</p>
           </div>
-          
-          <div className="card-premium p-8 border border-primary/30 sm:col-span-3 lg:col-span-4 bg-linear-to-br from-primary/10 via-void to-void shadow-red-strong overflow-hidden relative">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
-            
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
-              <div>
-                <p className="text-text-secondary font-display text-[10px] tracking-[0.3em] uppercase mb-2 font-bold">Balance General Neto</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-primary font-display text-2xl mr-1">$</span>
-                  <p className="font-display text-6xl text-white font-bold tracking-tight leading-none">${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-3xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span></p>
-                </div>
-                <p className="text-[10px] text-text-muted mt-4 uppercase tracking-[0.2em] font-medium opacity-60">Cálculo basado en ingresos brutos, gastos operativos y comisiones de barbería.</p>
-              </div>
-              
-              <div className="flex border border-white/10 rounded-2xl overflow-hidden bg-void/50 backdrop-blur-sm p-1 w-full lg:w-auto">
-                <div className="flex-1 lg:flex-none text-center px-10 py-6 border-r border-white/5">
-                  <p className="text-[11px] text-text-muted uppercase font-bold tracking-widest mb-2 opacity-50">Ingresos Totales</p>
-                  <p className="font-display text-2xl text-white tracking-widest font-bold">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-sm opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
-                </div>
-                <div className="flex-1 lg:flex-none text-center px-10 py-6 bg-primary/5">
-                  <p className="text-[11px] text-primary/80 uppercase font-bold tracking-widest mb-2">Margen Operativo</p>
-                  <p className="font-display text-2xl text-primary tracking-widest font-bold">${(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2).split('.')[0]}<span className="text-sm opacity-50">.{(totalRevenue - (globalIngresos + globalBarberiaShare - globalEgresos)).toFixed(2).split('.')[1]}</span></p>
-                </div>
-              </div>
-            </div>
+          <div className="card-premium p-6 border-l-4 border-l-primary-light bg-linear-to-br from-primary/10 to-transparent">
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Neto</p>
+            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">
+              ${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span>
+            </p>
           </div>
         </div>
       )}
+      </div>
 
       {Object.keys(revenueByService).length > 0 && (
-        <div className="card-premium overflow-hidden animate-fade-in-up">
-          <div className="p-6 border-b border-white/5">
-            <h3 className="font-display text-xl text-white tracking-widest uppercase">Ganancias por Servicio</h3>
+        <div className="card-premium overflow-hidden animate-fade-in-up max-w-5xl mx-auto lg:mx-0">
+          <div className="p-5 border-b border-white/5 bg-white/1">
+            <h3 className="font-display text-lg text-white tracking-widest uppercase">Ganancias por Servicio</h3>
           </div>
           
           {/* Vista Escritorio (Tabla) */}

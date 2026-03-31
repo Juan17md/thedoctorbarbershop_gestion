@@ -1,0 +1,48 @@
+# 📝 BITÁCORA DE DESARROLLO | The Doctor Barber Shop
+## Ecosistema de Gestión Interna - Surgical Edge Engineering
+
+Este documento sirve como registro cronológico de todas las modificaciones, mejoras y correcciones realizadas en el sistema. Es una herramienta de auditoría técnica y transparencia para el proceso de desarrollo, diseñada para ser parte integral de un portafolio profesional.
+
+---
+
+### 📅 Registro Cronológico
+
+#### [2026-03-31] - Inicialización del Sistema de Documentación
+- **Acción**: Creación y estructuración del archivo `documentacion.txt`.
+- **Descripción**: Se establece este registro para centralizar el historial de cambios, facilitando el seguimiento de nuevas características, correcciones de errores y refactorizaciones.
+- **Estado**: ✅ Finalizado
+
+#### [2026-03-31] - Estandarización de Fecha y Lógica Semanal
+- **Acción**: Sincronización de zona horaria y ajuste de calendario financiero.
+- **Descripción**: 
+  - Se estandarizó el manejo de fechas financieras utilizando la zona horaria de Venezuela (`America/Caracas`).
+  - Se ajustó la lógica de cálculo semanal para que los periodos comiencen los domingos y finalicen los sábados, alineándose con las necesidades operativas de la barbería.
+  - Mejora en la precisión de las comparaciones de cadenas de fecha para reportes semanales y mensuales.
+- **Estado**: ✅ Finalizado
+
+#### [2026-03-31] - Optimización de Estadísticas de Barberos
+- **Acción**: Inclusión de todos los perfiles de barberos en el desglose semanal.
+- **Descripción**: 
+  - Se actualizó el panel de estadísticas para asegurar que todos los barberos registrados sean visibles en el reporte semanal, independientemente de su actividad.
+  - Implementación de ordenamiento descendente por ingresos totales para mejorar la lectura del rendimiento.
+  - Visualización clara de la distribución de ganancias entre el barbero y la barbería.
+- **Estado**: ✅ Finalizado
+
+#### [2026-03-31] - Acciones en Historial Financiero
+- **Acción**: Implementación de Editar y Eliminar en registros de servicios.
+- **Descripción**: 
+  - Se añadieron capacidades de edición y eliminación en la tabla de historial financiero del dashboard.
+  - Implementación de lógica de reversión automática para saldos bancarios de barberos y barbería al eliminar o modificar registros.
+  - Sincronización automática de logs de transacciones y cumplimiento de objetivos de rendimiento.
+- **Estado**: ✅ Finalizado
+
+#### [2026-03-31] - Optimización de Interfaz y Espacios
+- **Acción**: Rediseño del layout de Finanzas (Bento Grid).
+- **Descripción**: 
+  - Se reestructuró el dashboard de finanzas para aprovechar mejor el espacio, pasando de un diseño vertical a uno de filas horizontales compactas.
+  - Se igualó el peso visual del "Balance Neto" con los indicadores de "Ingresos", "Egresos" y "Barbería".
+  - Reducción de paddings internos (`p-8` → `p-6`) para minimizar el área vacía.
+  - Ajuste de ancho máximo en la tabla de ganancias para mejorar la legibilidad en pantallas grandes.
+- **Estado**: ✅ Finalizado
+
+---
