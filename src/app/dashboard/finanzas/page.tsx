@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
+import { getLocalDateString } from "@/lib/utils";
 
 interface Transaccion {
   id: string;
@@ -53,7 +54,7 @@ export default function FinanzasPage() {
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
 
@@ -191,7 +192,7 @@ export default function FinanzasPage() {
         return true;
       }
 
-      const txDateStr = txDate.toISOString().split("T")[0];
+      const txDateStr = getLocalDateString(txDate);
 
       if (periodFilter === "day") {
         return txDateStr === selectedDate;
@@ -237,7 +238,7 @@ export default function FinanzasPage() {
       const totalAmount = service.price;
       const barberShareAmount = totalAmount * 0.6;
       const barberiaShareAmount = totalAmount * 0.4;
-      const date = new Date().toISOString().split("T")[0];
+      const date = getLocalDateString();
 
       // 1. Crear registro financiero
       await addDoc(collection(db, "finances"), {
@@ -384,7 +385,7 @@ export default function FinanzasPage() {
         type: "deduction",
         amount: record.barberShare,
         description: `Eliminación/Reversión: ${record.serviceName}`,
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalDateString(),
         createdAt: new Date()
       });
 
@@ -406,7 +407,7 @@ export default function FinanzasPage() {
         type: "deduction",
         amount: record.barberiaShare,
         description: `Eliminación/Reversión: ${record.serviceName} (${record.barberName})`,
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalDateString(),
         createdAt: new Date()
       });
 
@@ -495,7 +496,7 @@ export default function FinanzasPage() {
           type: "deduction", 
           amount: recordToEdit.barberShare, 
           description: `Ajuste (Edición de registro): Reversión ${recordToEdit.serviceName}`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -513,7 +514,7 @@ export default function FinanzasPage() {
           type: "deduction", 
           amount: recordToEdit.barberiaShare, 
           description: `Ajuste (Edición): Reversión ${recordToEdit.serviceName} (${recordToEdit.barberName})`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -531,7 +532,7 @@ export default function FinanzasPage() {
           type: "earning", 
           amount: newBarberShare, 
           description: `Ajuste (Nuevo): ${selService.name}`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -542,7 +543,7 @@ export default function FinanzasPage() {
           type: "earning", 
           amount: newBarberiaShare, 
           description: `Ajuste (Nuevo): ${selService.name} (${finalBarberName})`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
         

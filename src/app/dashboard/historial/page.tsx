@@ -42,6 +42,7 @@ import {
 } from "@/components/ui";
 import SearchInput from "@/components/ui/search-input";
 import { DatePicker } from "@/components/ui/date-picker";
+import { getLocalDateString } from "@/lib/utils";
 
 const ITEMS_POR_PAGINA = 15;
 
@@ -59,7 +60,7 @@ export default function HistorialPage() {
   const [filtroBarbero, setFiltroBarbero] = useState("todos");
   const [filtroServicio, setFiltroServicio] = useState("todos");
   const [fechaSeleccionada, setFechaSeleccionada] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
 
   // Estado para Edición
@@ -159,7 +160,7 @@ export default function HistorialPage() {
         type: "deduction",
         amount: record.barberShare,
         description: `Eliminación/Reversión: ${record.serviceName}`,
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalDateString(),
         createdAt: new Date()
       });
 
@@ -181,7 +182,7 @@ export default function HistorialPage() {
         type: "deduction",
         amount: record.barberiaShare,
         description: `Eliminación/Reversión: ${record.serviceName} (${record.barberName})`,
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalDateString(),
         createdAt: new Date()
       });
 
@@ -269,7 +270,7 @@ export default function HistorialPage() {
           type: "deduction", 
           amount: recordToEdit.barberShare, 
           description: `Ajuste (Edición de registro): Reversión ${recordToEdit.serviceName}`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -287,7 +288,7 @@ export default function HistorialPage() {
           type: "deduction", 
           amount: recordToEdit.barberiaShare, 
           description: `Ajuste (Edición): Reversión ${recordToEdit.serviceName} (${recordToEdit.barberName})`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -305,7 +306,7 @@ export default function HistorialPage() {
           type: "earning", 
           amount: newBarberShare, 
           description: `Ajuste (Nuevo): ${selService.name}`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
 
@@ -316,7 +317,7 @@ export default function HistorialPage() {
           type: "earning", 
           amount: newBarberiaShare, 
           description: `Ajuste (Nuevo): ${selService.name} (${finalBarberName})`, 
-          date: new Date().toISOString().split("T")[0], 
+          date: getLocalDateString(), 
           createdAt: new Date() 
         });
         
@@ -405,10 +406,10 @@ export default function HistorialPage() {
   // Registros filtrados
   const registrosFiltrados = useMemo(() => {
     const ahora = new Date();
-    const hoyStr = ahora.toISOString().split("T")[0];
+    const hoyStr = getLocalDateString(ahora);
     const inicioSemana = new Date(ahora);
     inicioSemana.setDate(ahora.getDate() - ahora.getDay());
-    const inicioSemanaStr = inicioSemana.toISOString().split("T")[0];
+    const inicioSemanaStr = getLocalDateString(inicioSemana);
 
     return registros.filter((r) => {
       if (periodo === "hoy" && r.date !== fechaSeleccionada) return false;

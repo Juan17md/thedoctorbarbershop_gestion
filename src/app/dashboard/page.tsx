@@ -14,6 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
+import { getLocalDateString } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
@@ -44,10 +45,10 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [isAdmin, userRole?.uid]);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
+  const startOfWeekStr = getLocalDateString(startOfWeek);
 
   const todayRecords = records.filter(r => r.date === today);
   const weekRecords = records.filter(r => r.date >= startOfWeekStr);

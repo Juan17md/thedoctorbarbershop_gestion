@@ -20,6 +20,7 @@ import {
 import { db } from "@/lib/firebase";
 import { Plus, Pencil, Trash2, Target, Check, Calendar, Wallet } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
+import { getLocalDateString } from "@/lib/utils";
 
 function convertirFecha(valor: unknown): Date | undefined {
   if (!valor) return undefined;
@@ -138,7 +139,7 @@ export default function ObjetivosPage() {
     setFormData({
       name: obj.name ?? "",
       targetAmount: String(obj.targetAmount ?? ""),
-      endDate: obj.endDate ? obj.endDate.toISOString().split("T")[0] : "",
+      endDate: obj.endDate ? getLocalDateString(obj.endDate) : "",
     });
     setEditingId(obj.id);
     setIsModalOpen(true);

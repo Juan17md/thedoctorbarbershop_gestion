@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Calendar, Clock, User, Plus, ChevronLeft, ChevronRight, X, Check } from "lucide-react";
+import { getLocalDateString } from "@/lib/utils";
 
 const TIME_SLOTS = [
   "09:00", "09:45", "10:30", "11:15", "12:00", "12:45", 
@@ -82,7 +83,7 @@ export default function CitasPage() {
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
   const isBlocked = (date: Date, time: string) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = getLocalDateString(date);
     return blockedTimes.some(bt => bt.date === dateStr && bt.time === time && (isAdmin || bt.barberId === userRole?.uid));
   };
 
@@ -98,7 +99,7 @@ export default function CitasPage() {
     e.preventDefault();
     await addDoc(collection(db, "blocked_times"), {
       barberId: userRole?.uid,
-      date: selectedDate.toISOString().split("T")[0],
+      date: getLocalDateString(selectedDate),
       time: formData.time,
       createdAt: new Date()
     });
@@ -188,7 +189,7 @@ export default function CitasPage() {
             <p className="text-text-secondary text-sm mb-3">Horarios bloqueados</p>
             <div className="space-y-2">
               {blockedTimes
-                .filter(bt => bt.date === selectedDate.toISOString().split("T")[0] && (isAdmin || bt.barberId === userRole?.uid))
+                .filter(bt => bt.date === getLocalDateString(selectedDate) && (isAdmin || bt.barberId === userRole?.uid))
                 .map(bt => (
                   <div key={bt.id} className="flex items-center justify-between bg-red-500/10 p-3 rounded-lg">
                     <span className="text-red-400 text-sm">{bt.time}</span>
@@ -197,7 +198,7 @@ export default function CitasPage() {
                     </button>
                   </div>
                 ))}
-              {blockedTimes.filter(bt => bt.date === selectedDate.toISOString().split("T")[0]).length === 0 && (
+              {blockedTimes.filter(bt => bt.date === getLocalDateString(selectedDate)).length === 0 && (
                 <p className="text-text-muted text-sm">No hay horarios bloqueados</p>
               )}
             </div>

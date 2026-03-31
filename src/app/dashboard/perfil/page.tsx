@@ -20,6 +20,7 @@ import {
 import { db, auth } from "@/lib/firebase";
 import { User, Mail, Lock, Save, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, Check, Trash2, Pencil, Scissors, Shield, Users, Phone, Loader2 } from "lucide-react";
 import { Select } from "@/components/ui";
+import { getLocalDateString } from "@/lib/utils";
 
 interface BarberUser {
   uid: string;
@@ -147,7 +148,7 @@ export default function PerfilPage() {
         type: "withdrawal",
         amount: withdrawAmount,
         description: "Retiro de ganancias",
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalDateString(),
         createdAt: new Date()
       });
 
