@@ -63,6 +63,18 @@ export default function HistorialPage() {
     getLocalDateString()
   );
 
+  // Actualizar la fecha seleccionada automáticamente a medianoche si el filtro es "hoy"
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const today = getLocalDateString();
+      if (periodo === "hoy" && fechaSeleccionada !== today) {
+        setFechaSeleccionada(today);
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [periodo, fechaSeleccionada]);
+
+
   // Estado para Edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);

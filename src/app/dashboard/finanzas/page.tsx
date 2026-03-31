@@ -29,7 +29,8 @@ import {
   TrendingUp,
   Pencil,
   Trash2,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
@@ -57,6 +58,23 @@ export default function FinanzasPage() {
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Actualizar la fecha seleccionada automáticamente a medianoche si el filtro es "hoy"
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const today = getLocalDateString();
+      if (periodFilter === "day" && selectedDate !== today) {
+        // Solo actualizamos si el usuario no ha cambiado manualmente la fecha
+        // (En este caso, setSelectedDate se usa tanto para el 'Hoy' por defecto como para el DatePicker)
+        // Para simplificar y cumplir el requerimiento de "limpieza automática", 
+        // si es un nuevo día, reseteamos a ese día.
+        setSelectedDate(today);
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [periodFilter, selectedDate]);
+
 
   // Estado para Edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -214,6 +232,8 @@ export default function FinanzasPage() {
 
   const handleRegisterService = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const service = serviciosDisponibles.find(s => s.id === formData.serviceId);
     if (!service) return;
 
@@ -228,6 +248,7 @@ export default function FinanzasPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const totalAmount = service.price;
       const barberShareAmount = totalAmount * 0.6;
@@ -352,6 +373,7 @@ export default function FinanzasPage() {
       alert("Hubo un error al registrar el servicio. Por favor intenta nuevamente.");
     } finally {
       // Siempre cerrar el modal y limpiar el form al final, incluso si hay error
+      setIsSubmitting(false);
       setIsModalOpen(false);
       setFormData({ serviceId: "", clientName: "", barberId: "" });
     }
@@ -451,6 +473,7 @@ export default function FinanzasPage() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!recordToEdit) return;
 
     if (!formData.serviceId || (isAdmin && !formData.barberId)) {
@@ -460,6 +483,8 @@ export default function FinanzasPage() {
 
     const selService = serviciosDisponibles.find(s => s.id === formData.serviceId);
     if (!selService) return;
+
+    setIsSubmitting(true);
 
     const finalBarberId = isAdmin ? formData.barberId : recordToEdit.barberId;
     const finalBarber = isAdmin && formData.barberId 
@@ -607,6 +632,8 @@ export default function FinanzasPage() {
     } catch (err) {
       console.error("Error al actualizar:", err);
       alert("Hubo un problema guardando la edición.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -956,9 +983,14 @@ export default function FinanzasPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 btn-primary text-sm py-3"
+                  disabled={isSubmitting}
+                  className="flex-1 btn-primary text-sm py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <Check size={18} /> Registrar
+                  {isSubmitting ? (
+                    <><Loader2 size={18} className="animate-spin" /> Registrando...</>
+                  ) : (
+                    <><Check size={18} /> Registrar</>
+                  )}
                 </button>
               </div>
             </form>
@@ -1013,9 +1045,14 @@ export default function FinanzasPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 btn-primary text-sm py-3"
+                  disabled={isSubmitting}
+                  className="flex-1 btn-primary text-sm py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <Check size={18} /> Guardar
+                  {isSubmitting ? (
+                    <><Loader2 size={18} className="animate-spin" /> Guardando...</>
+                  ) : (
+                    <><Check size={18} /> Guardar</>
+                  )}
                 </button>
               </div>
             </form>

@@ -16,6 +16,8 @@ import {
 import { db } from "@/lib/firebase";
 import { TrendingUp, Scissors, DollarSign, Activity } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
+import { getLocalDateString } from "@/lib/utils";
+
 
 export default function EstadisticasPage() {
   const { userRole, loading } = useAuth();
@@ -23,6 +25,19 @@ export default function EstadisticasPage() {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [barbersList, setBarbersList] = useState<{uid: string, name: string}[]>([]);
   const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
+  const [today, setToday] = useState(getLocalDateString());
+
+  // Actualizar la fecha actual cada minuto para manejar el cambio de medianoche
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const current = getLocalDateString();
+      if (current !== today) {
+        setToday(current);
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [today]);
+
 
   useEffect(() => {
     const fetchBarbers = async () => {
@@ -85,8 +100,9 @@ export default function EstadisticasPage() {
       const fechaRegistro = new Date(anio, mes - 1, dia);
 
       if (periodFilter === "day") {
-        return record.date === hoy.toLocaleDateString("en-CA");
+        return record.date === today;
       }
+
 
       if (periodFilter === "week") {
         const inicioSemana = new Date(hoy);

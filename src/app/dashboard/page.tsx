@@ -20,9 +20,21 @@ export default function DashboardPage() {
   const { userRole } = useAuth();
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
+  const [today, setToday] = useState(getLocalDateString());
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("week");
   const [rankingFilter, setRankingFilter] = useState<"today" | "week" | "month">("week");
+
+  // Actualizar la fecha actual cada minuto para manejar el cambio de medianoche
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const current = getLocalDateString();
+      if (current !== today) {
+        setToday(current);
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [today]);
 
   useEffect(() => {
     if (!userRole?.uid) return;
@@ -45,7 +57,6 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [isAdmin, userRole?.uid]);
 
-  const today = getLocalDateString();
   const startOfWeekStr = getStartOfWeekString();
   const startOfMonthStr = getStartOfMonthString();
 
@@ -55,6 +66,7 @@ export default function DashboardPage() {
 
   const filteredRecords = timeFilter === "today" ? todayRecords : timeFilter === "week" ? weekRecords : monthRecords;
   const rankingRecords = rankingFilter === "today" ? todayRecords : rankingFilter === "week" ? weekRecords : monthRecords;
+
   
   const filterLabel = timeFilter === "today" ? "HOY" : timeFilter === "week" ? "SEMANA" : "MES";
   const rankingLabel = rankingFilter === "today" ? "hoy" : rankingFilter === "week" ? "semana" : "mes";
