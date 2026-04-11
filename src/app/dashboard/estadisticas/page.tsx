@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { type FinancialRecord } from "@/lib/types";
-import { startOfWeek, endOfWeek, format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+
 import { 
   collection, 
   onSnapshot,
@@ -14,9 +13,9 @@ import {
   getDocs
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { TrendingUp, Scissors, DollarSign, Activity } from "lucide-react";
+import { TrendingUp, Scissors, DollarSign, Activity, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
-import { getLocalDateString } from "@/lib/utils";
+import { getWeekRangeFromOffset } from "@/lib/utils";
 
 
 export default function EstadisticasPage() {
@@ -24,19 +23,14 @@ export default function EstadisticasPage() {
   const isAdmin = userRole?.role === "admin";
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [barbersList, setBarbersList] = useState<{uid: string, name: string}[]>([]);
-  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
-  const [today, setToday] = useState(getLocalDateString());
 
-  // Actualizar la fecha actual cada minuto para manejar el cambio de medianoche
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const current = getLocalDateString();
-      if (current !== today) {
-        setToday(current);
-      }
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [today]);
+  // Navegación semanal
+  const [semanaOffset, setSemanaOffset] = useState(0);
+  const rangoSemana = useMemo(
+    () => getWeekRangeFromOffset(semanaOffset),
+    [semanaOffset]
+  );
+  const esSemanaActual = semanaOffset === 0;
 
 
   useEffect(() => {
@@ -86,44 +80,10 @@ export default function EstadisticasPage() {
   }, [isAdmin, loading, userRole?.uid]);
 
 
-  const getFilteredRecords = () => {
-    const ahora = new Date();
-    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-
-    return records.filter((record) => {
-      const [anio, mes, dia] = record.date.split("-").map(Number);
-
-      if (!anio || !mes || !dia) {
-        return false;
-      }
-
-      const fechaRegistro = new Date(anio, mes - 1, dia);
-
-      if (periodFilter === "day") {
-        return record.date === today;
-      }
-
-
-      if (periodFilter === "week") {
-        const inicioSemana = new Date(hoy);
-        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
-
-        const finSemana = new Date(inicioSemana);
-        finSemana.setDate(inicioSemana.getDate() + 6);
-        finSemana.setHours(23, 59, 59, 999);
-
-        return fechaRegistro >= inicioSemana && fechaRegistro <= finSemana;
-      }
-
-      if (periodFilter === "month") {
-        return fechaRegistro.getMonth() === hoy.getMonth() && fechaRegistro.getFullYear() === hoy.getFullYear();
-      }
-
-      return true;
-    });
-  };
-
-  const filteredRecords = getFilteredRecords();
+  // Registros filtrados por semana seleccionada
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => r.date >= rangoSemana.inicio && r.date <= rangoSemana.fin);
+  }, [records, rangoSemana]);
 
   const totalServices = filteredRecords.length;
   const totalRevenue = filteredRecords.reduce((sum, r) => sum + r.totalAmount, 0);
@@ -141,47 +101,32 @@ export default function EstadisticasPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const weeklyStats = filteredRecords.reduce((acc, r) => {
-    const fecha = parseISO(r.date);
-    const inicioId = format(startOfWeek(fecha, { weekStartsOn: 0 }), "yyyy-MM-dd");
-    
-    if (!acc[inicioId]) {
-      acc[inicioId] = {
-        label: `${format(startOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })} - ${format(endOfWeek(fecha, { weekStartsOn: 0 }), "dd MMM", { locale: es })}`,
-        total: 0,
-        barberia: 0,
-        barbers: {} as Record<string, { barberShare: number; barberiaShare: number; total: number }>
-      };
-    }
+  // Desglose por barbero para la semana seleccionada
+  const desgloseBarbers = useMemo(() => {
+    const desglose = filteredRecords.reduce((acc, r) => {
+      if (!acc[r.barberName]) {
+        acc[r.barberName] = { barberShare: 0, barberiaShare: 0, total: 0 };
+      }
+      acc[r.barberName].barberShare += r.barberShare;
+      acc[r.barberName].barberiaShare += r.barberiaShare;
+      acc[r.barberName].total += r.totalAmount;
+      return acc;
+    }, {} as Record<string, { barberShare: number; barberiaShare: number; total: number }>);
 
-    acc[inicioId].total += r.totalAmount;
-    acc[inicioId].barberia += r.barberiaShare;
-
-    if (!acc[inicioId].barbers[r.barberName]) {
-      acc[inicioId].barbers[r.barberName] = { barberShare: 0, barberiaShare: 0, total: 0 };
-    }
-    acc[inicioId].barbers[r.barberName].barberShare += r.barberShare;
-    acc[inicioId].barbers[r.barberName].barberiaShare += r.barberiaShare;
-    acc[inicioId].barbers[r.barberName].total += r.totalAmount;
-
-    return acc;
-  }, {} as Record<string, { label: string; total: number; barberia: number; barbers: Record<string, { barberShare: number; barberiaShare: number; total: number }> }>);
-
-  // Asegurar que todos los barberos aparezcan en cada semana
-  Object.keys(weeklyStats).forEach(weekId => {
-    barbersList.forEach(barber => {
-      if (!weeklyStats[weekId].barbers[barber.name]) {
-        weeklyStats[weekId].barbers[barber.name] = { barberShare: 0, barberiaShare: 0, total: 0 };
+    // Asegurar que todos los barberos aparezcan
+    barbersList.forEach((barber) => {
+      if (!desglose[barber.name]) {
+        desglose[barber.name] = { barberShare: 0, barberiaShare: 0, total: 0 };
       }
     });
-  });
 
-  const maxWeeklyValue = Math.max(
-    ...Object.values(weeklyStats).flatMap(stats => 
-      Object.entries(stats.barbers)
-        .filter(([name]) => barbersList.some(b => b.name === name))
-        .flatMap(([, b]) => [b.barberShare, b.barberiaShare])
-    ),
+    return desglose;
+  }, [filteredRecords, barbersList]);
+
+  const maxBarValue = Math.max(
+    ...Object.entries(desgloseBarbers)
+      .filter(([name]) => barbersList.some((b) => b.name === name))
+      .flatMap(([, b]) => [b.barberShare, b.barberiaShare]),
     1
   );
 
@@ -202,35 +147,125 @@ export default function EstadisticasPage() {
   return (
     <div className="space-y-8">
       <div className="card-premium p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-text-muted text-[10px] font-bold tracking-[0.25em] uppercase opacity-70">
-              Vista general
-            </p>
-            <h2 className="font-display text-2xl sm:text-3xl text-white tracking-[0.05em] uppercase">
-              Rendimiento del período
-            </h2>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p className="text-text-muted text-[10px] font-bold tracking-[0.25em] uppercase opacity-70">
+                Vista general
+              </p>
+              <h2 className="font-display text-2xl sm:text-3xl text-white tracking-[0.05em] uppercase">
+                Rendimiento semanal
+              </h2>
+            </div>
+
+            <div className="flex items-center">
+              {esSemanaActual ? (
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  Semana actual
+                </span>
+              ) : (
+                <button
+                  onClick={() => setSemanaOffset(0)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white border border-white/10 hover:border-primary/30 hover:bg-primary/10 active:scale-95 transition-all"
+                >
+                  Ir a semana actual
+                  <ChevronRight size={12} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="bg-void/60 rounded-lg p-1 border border-white/5 w-full lg:w-auto">
-            <div className="grid grid-cols-3 lg:flex items-center gap-1">
-              {(["day", "week", "month"] as const).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setPeriodFilter(period)}
-                  className={`px-3 py-2.5 rounded-md font-display text-[11px] sm:text-[13px] font-bold tracking-widest uppercase transition-all border text-center whitespace-nowrap ${
-                    periodFilter === period
-                      ? "bg-primary text-white border-primary shadow-red-glow"
-                      : "bg-surface-high/50 text-text-muted border-transparent hover:border-primary/30 hover:text-white"
-                  }`}
-                >
-                  {period === "day" ? "Hoy" : period === "week" ? "Semana" : "Mes"}
-                </button>
-              ))}
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto font-display">
+            <button
+              onClick={() => setSemanaOffset((prev) => prev - 1)}
+              className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 transition-all"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-4 py-2.5 bg-void/60 rounded-lg border border-white/5 min-w-0 sm:min-w-[240px]">
+              <CalendarDays size={16} className="text-primary shrink-0" />
+              <span className="text-white text-xs sm:text-sm tracking-wider whitespace-nowrap">
+                {rangoSemana.label}
+              </span>
             </div>
+
+            <button
+              onClick={() => setSemanaOffset((prev) => prev + 1)}
+              disabled={esSemanaActual}
+              className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
         </div>
       </div>
+
+      <div className="card-premium p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+          <div>
+            <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
+              Ingresos de la <span className="text-primary">semana</span>
+            </h3>
+            <p className="text-text-muted text-sm">
+              Comparativa entre lo generado para cada barbero y lo correspondiente a la barbería.
+            </p>
+          </div>
+          <span className="text-white font-display text-lg tracking-wider">
+            Total ${totalRevenue.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="space-y-8">
+          {Object.entries(desgloseBarbers)
+            .filter(([name]) => barbersList.some((b) => b.name === name))
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([barberName, stats]) => (
+              <div key={barberName} className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-px flex-1 bg-white/5"></div>
+                  <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
+                  <div className="h-px flex-1 bg-white/5"></div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                    <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                      Personal
+                    </span>
+                    <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                      <div
+                        className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${maxBarValue > 0 ? (stats.barberShare / maxBarValue) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                      ${stats.barberShare.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                    <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                      Barbería
+                    </span>
+                    <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                      <div
+                        className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${maxBarValue > 0 ? (stats.barberiaShare / maxBarValue) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                      ${stats.barberiaShare.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
@@ -329,82 +364,7 @@ export default function EstadisticasPage() {
         </div>
       )}
 
-      <div className="card-premium p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
-          <div>
-            <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
-              Ingresos por <span className="text-primary">semana</span>
-            </h3>
-            <p className="text-text-muted text-sm">
-              Comparativa semanal entre lo generado para el barbero y lo correspondiente a la barbería.
-            </p>
-          </div>
-        </div>
 
-        <div className="space-y-6">
-          {Object.entries(weeklyStats)
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([weekId, data]) => (
-              <div key={weekId} className="rounded-xl border border-white/5 bg-void/30 p-4 sm:p-5">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-6">
-                  <span className="text-text-muted text-[11px] font-medium uppercase tracking-[0.15em]">
-                    Semana {data.label}
-                  </span>
-                  <span className="text-white font-display text-lg tracking-wider">
-                    Total ${data.total.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="space-y-8">
-                  {Object.entries(data.barbers)
-                    .filter(([name]) => barbersList.some(b => b.name === name))
-                    .sort((a, b) => b[1].total - a[1].total)
-                    .map(([barberName, stats]) => (
-                      <div key={barberName} className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="h-px flex-1 bg-white/5"></div>
-                          <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
-                          <div className="h-px flex-1 bg-white/5"></div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
-                            <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
-                              Personal
-                            </span>
-                            <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                              <div
-                                className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
-                                style={{ width: `${maxWeeklyValue > 0 ? (stats.barberShare / maxWeeklyValue) * 100 : 0}%` }}
-                              />
-                            </div>
-                            <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                              ${stats.barberShare.toFixed(2)}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
-                            <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
-                              Barbería
-                            </span>
-                            <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                              <div
-                                className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
-                                style={{ width: `${maxWeeklyValue > 0 ? (stats.barberiaShare / maxWeeklyValue) * 100 : 0}%` }}
-                              />
-                            </div>
-                            <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                              ${stats.barberiaShare.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
 
       {Object.keys(servicesByType).length > 0 && (
         <div className="card-premium p-6 sm:p-8">
@@ -414,7 +374,7 @@ export default function EstadisticasPage() {
                 Distribución por <span className="text-primary">servicio</span>
               </h3>
               <p className="text-text-muted text-sm">
-                Ranking visual de los servicios con mayor participación en el período actual.
+                Ranking visual de los servicios con mayor participación en la semana seleccionada.
               </p>
             </div>
           </div>

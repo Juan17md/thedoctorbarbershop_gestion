@@ -29,7 +29,8 @@ import {
   X,
   Pencil,
   Trash2,
-  Check
+  Check,
+  CalendarDays
 } from "lucide-react";
 import {
   Table,
@@ -41,8 +42,7 @@ import {
   Select,
 } from "@/components/ui";
 import SearchInput from "@/components/ui/search-input";
-import { DatePicker } from "@/components/ui/date-picker";
-import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
+import { getLocalDateString, getWeekRangeFromOffset } from "@/lib/utils";
 
 const ITEMS_POR_PAGINA = 15;
 
@@ -54,25 +54,20 @@ export default function HistorialPage() {
   const [cargando, setCargando] = useState(true);
   const [pagina, setPagina] = useState(1);
 
+  // Navegación semanal
+  const [semanaOffset, setSemanaOffset] = useState(0);
+
   // Filtros
-  const [periodo, setPeriodo] = useState<"hoy" | "semana" | "mes" | "todo">("semana");
   const [busqueda, setBusqueda] = useState("");
   const [filtroBarbero, setFiltroBarbero] = useState("todos");
   const [filtroServicio, setFiltroServicio] = useState("todos");
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(
-    getLocalDateString()
-  );
 
-  // Actualizar la fecha seleccionada automáticamente a medianoche si el filtro es "hoy"
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const today = getLocalDateString();
-      if (periodo === "hoy" && fechaSeleccionada !== today) {
-        setFechaSeleccionada(today);
-      }
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [periodo, fechaSeleccionada]);
+  // Rango de la semana seleccionada
+  const rangoSemana = useMemo(
+    () => getWeekRangeFromOffset(semanaOffset),
+    [semanaOffset]
+  );
+  const esSemanaActual = semanaOffset === 0;
 
 
   // Estado para Edición
@@ -415,15 +410,11 @@ export default function HistorialPage() {
     return [...new Set(registros.map((r) => r.serviceName))].sort();
   }, [registros]);
 
-  // Registros filtrados
+  // Registros filtrados por semana seleccionada
   const registrosFiltrados = useMemo(() => {
-    const inicioSemanaStr = getStartOfWeekString();
-    const inicioMesStr = getStartOfMonthString();
-
     return registros.filter((r) => {
-      if (periodo === "hoy" && r.date !== fechaSeleccionada) return false;
-      if (periodo === "semana" && r.date < inicioSemanaStr) return false;
-      if (periodo === "mes" && r.date < inicioMesStr) return false;
+      // Filtro semanal
+      if (r.date < rangoSemana.inicio || r.date > rangoSemana.fin) return false;
       if (esAdmin && filtroBarbero !== "todos" && r.barberName !== filtroBarbero)
         return false;
       if (filtroServicio !== "todos" && r.serviceName !== filtroServicio)
@@ -438,12 +429,12 @@ export default function HistorialPage() {
       }
       return true;
     });
-  }, [registros, periodo, fechaSeleccionada, filtroBarbero, filtroServicio, busqueda, esAdmin]);
+  }, [registros, rangoSemana, filtroBarbero, filtroServicio, busqueda, esAdmin]);
 
   // Reset paginación cuando cambian filtros
   useEffect(() => {
     setPagina(1);
-  }, [periodo, busqueda, filtroBarbero, filtroServicio, fechaSeleccionada]);
+  }, [semanaOffset, busqueda, filtroBarbero, filtroServicio]);
 
   const totalPaginas = Math.ceil(registrosFiltrados.length / ITEMS_POR_PAGINA);
   const registrosPagina = registrosFiltrados.slice(
@@ -495,35 +486,49 @@ export default function HistorialPage() {
     <div className="space-y-8">
       {/* Panel de filtros */}
       <div className="card-premium p-4 md:p-5 space-y-4">
-        {/* Filtro de período */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between font-display">
-          <div className="bg-void/60 rounded-lg p-1 border border-white/5 w-full sm:w-auto">
-            <div className="grid grid-cols-4 sm:flex items-center gap-1">
-              {(["hoy", "semana", "mes", "todo"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriodo(p)}
-                  className={`px-2 sm:px-4 py-2 rounded-md text-[9px] sm:text-[12px] font-bold tracking-widest uppercase transition-all whitespace-nowrap text-center ${
-                    periodo === p
-                      ? "bg-primary/15 text-white border border-primary shadow-red-glow"
-                      : "text-text-secondary hover:text-white border border-transparent"
-                  }`}
-                >
-                  {p === "hoy" ? "Hoy" : p === "semana" ? "Semana" : p === "mes" ? "Mes" : "Todo"}
-                </button>
-              ))}
+        {/* Navegador semanal */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between font-display">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => setSemanaOffset((prev) => prev - 1)}
+              className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 transition-all"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-4 py-2.5 bg-void/60 rounded-lg border border-white/5 min-w-0 sm:min-w-[240px]">
+              <CalendarDays size={16} className="text-primary shrink-0" />
+              <span className="text-white text-xs sm:text-sm tracking-wider whitespace-nowrap">
+                {rangoSemana.label}
+              </span>
             </div>
+
+            <button
+              onClick={() => setSemanaOffset((prev) => prev + 1)}
+              disabled={esSemanaActual}
+              className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
 
-          {periodo === "hoy" && (
-            <div className="w-full sm:w-auto">
-              <DatePicker
-                value={fechaSeleccionada}
-                onChange={(v) => setFechaSeleccionada(v)}
-                placeholder="Seleccionar fecha"
-              />
-            </div>
-          )}
+          <div className="flex items-center">
+            {esSemanaActual ? (
+              <span className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                Semana actual
+              </span>
+            ) : (
+              <button
+                onClick={() => setSemanaOffset(0)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white border border-white/10 hover:border-primary/30 hover:bg-primary/10 active:scale-95 transition-all"
+              >
+                Ir a semana actual
+                <ChevronRight size={12} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Búsqueda y filtros avanzados */}
