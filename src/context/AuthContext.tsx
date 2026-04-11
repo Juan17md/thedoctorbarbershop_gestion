@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserRole({
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
-              name: data.name || firebaseUser.email?.split("@")[0] || "Usuario",
+              name: data.name || firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
               phone: data.phone || "",
               role: data.role || "barber",
             });
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserRole({
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
-              name: firebaseUser.email?.split("@")[0] || "Usuario",
+              name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
               phone: "",
               role: "barber",
             });
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole({
             uid: firebaseUser.uid,
             email: firebaseUser.email || "",
-            name: firebaseUser.email?.split("@")[0] || "Usuario",
+            name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
             phone: "",
             role: "barber",
           });

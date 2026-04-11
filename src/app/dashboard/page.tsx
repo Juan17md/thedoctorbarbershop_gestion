@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { type FinancialRecord } from "@/lib/types";
@@ -12,9 +12,9 @@ import {
   where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History } from "lucide-react";
+import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
-import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
+import { getLocalDateString, getStartOfWeekString, getStartOfMonthString, getWeekRangeFromOffset } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
@@ -22,8 +22,10 @@ export default function DashboardPage() {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [today, setToday] = useState(getLocalDateString());
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month">("week");
-  const [rankingFilter, setRankingFilter] = useState<"today" | "week" | "month">("week");
+  const [semanaOffset, setSemanaOffset] = useState(0);
+
+  const esSemanaActual = semanaOffset === 0;
+  const rangoSemana = useMemo(() => getWeekRangeFromOffset(semanaOffset), [semanaOffset]);
 
   // Actualizar la fecha actual cada minuto para manejar el cambio de medianoche
   useEffect(() => {
@@ -57,36 +59,34 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [isAdmin, userRole?.uid]);
 
+  // Resumen rápido (siempre período actual)
   const startOfWeekStr = getStartOfWeekString();
   const startOfMonthStr = getStartOfMonthString();
-
   const todayRecords = records.filter(r => r.date === today);
   const weekRecords = records.filter(r => r.date >= startOfWeekStr);
   const monthRecords = records.filter(r => r.date >= startOfMonthStr);
 
-  const filteredRecords = timeFilter === "today" ? todayRecords : timeFilter === "week" ? weekRecords : monthRecords;
-  const rankingRecords = rankingFilter === "today" ? todayRecords : rankingFilter === "week" ? weekRecords : monthRecords;
-
-  
-  const filterLabel = timeFilter === "today" ? "HOY" : timeFilter === "week" ? "SEMANA" : "MES";
-  const rankingLabel = rankingFilter === "today" ? "hoy" : rankingFilter === "week" ? "semana" : "mes";
+  // Registros filtrados por la semana seleccionada (navegador)
+  const weeklyFilteredRecords = useMemo(() => {
+    return records.filter(r => r.date >= rangoSemana.inicio && r.date <= rangoSemana.fin);
+  }, [records, rangoSemana]);
 
   const dailyRevenue = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
   const weeklyRevenue = weekRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
   const monthlyRevenue = monthRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
 
   const barberDaily = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberShare, 0);
-  const barberiaDaily = todayRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberiaShare, 0);
 
-  const totalServices = records.length;
   const todayServices = todayRecords.length;
 
-  const revenueByBarber = isAdmin ? rankingRecords.reduce((acc: Record<string, number>, r: FinancialRecord) => {
-    acc[r.barberName] = (acc[r.barberName] || 0) + r.totalAmount;
-    return acc;
-  }, {} as Record<string, number>) : {};
-
-  const topBarbers = Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1]);
+  const topBarbers = useMemo(() => {
+    if (!isAdmin) return [];
+    const revenueByBarber = weeklyFilteredRecords.reduce((acc: Record<string, number>, r: FinancialRecord) => {
+      acc[r.barberName] = (acc[r.barberName] || 0) + r.totalAmount;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(revenueByBarber).sort((a, b) => b[1] - a[1]);
+  }, [isAdmin, weeklyFilteredRecords]);
 
   if (loading) {
     return (
@@ -99,6 +99,57 @@ export default function DashboardPage() {
     );
   }
 
+  // ── Navegador semanal global ──
+  const navegadorSemanal = (
+    <div className="card-premium p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-4">
+        <button
+          onClick={() => setSemanaOffset((prev) => prev - 1)}
+          className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 transition-all"
+          aria-label="Semana anterior"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <div className="flex flex-col items-center gap-1.5 min-w-0">
+          {esSemanaActual && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.15em] shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Semana actual
+            </span>
+          )}
+          <span className="font-display text-sm sm:text-base text-white tracking-widest uppercase text-center">
+            {rangoSemana.label}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!esSemanaActual && (
+            <button
+              onClick={() => setSemanaOffset(0)}
+              className="p-2.5 rounded-lg border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 active:scale-95 transition-all"
+              aria-label="Ir a semana actual"
+              title="Ir a semana actual"
+            >
+              <RotateCcw size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => setSemanaOffset((prev) => prev + 1)}
+            disabled={esSemanaActual}
+            className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            aria-label="Semana siguiente"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════
+  // ══  VISTA ADMIN  ═════════════════════
+  // ══════════════════════════════════════
   if (isAdmin) {
     const stats = [
       { name: "Ingresos del Día", value: `$${dailyRevenue.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
@@ -107,10 +158,19 @@ export default function DashboardPage() {
       { name: "Servicios Hoy", value: todayServices.toString(), icon: Scissors, color: "text-primary-light" },
     ];
 
+    const earningsByBarber = weeklyFilteredRecords.reduce((acc, r) => {
+      if (!acc[r.barberName]) acc[r.barberName] = { share: 0, barberiaShare: 0, generated: 0, services: 0 };
+      acc[r.barberName].share += r.barberShare;
+      acc[r.barberName].barberiaShare += r.barberiaShare;
+      acc[r.barberName].generated += r.totalAmount;
+      acc[r.barberName].services += 1;
+      return acc;
+    }, {} as Record<string, { share: number; barberiaShare: number; generated: number; services: number }>);
+    const barberEntries = Object.entries(earningsByBarber);
+
     return (
       <div className="space-y-8">
-        
-
+        {/* Tarjetas de resumen rápido */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
@@ -130,103 +190,65 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Navegador semanal global */}
+        {navegadorSemanal}
+
         <div className="grid grid-cols-1 gap-6">
+          {/* Distribución de Ganancias */}
           <div className="card-premium p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="font-display text-lg sm:text-2xl text-text-primary flex flex-wrap items-center gap-x-3 gap-y-1 tracking-[0.05em] uppercase">
                 <Wallet size={22} className="text-primary" />
                 DISTRIBUCIÓN DE GANANCIAS
               </h3>
-              <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
-                {(["today", "week", "month"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setTimeFilter(filter)}
-                    className={`px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-bold transition-all ${
-                      timeFilter === filter
-                        ? "bg-primary text-white"
-                        : "text-text-muted hover:text-white"
-                    }`}
-                  >
-                    {filter === "today" ? "Hoy" : filter === "week" ? "Semana" : "Mes"}
-                  </button>
-                ))}
-              </div>
             </div>
-            {(() => {
-              const earningsByBarber = filteredRecords.reduce((acc, r) => {
-                if (!acc[r.barberName]) acc[r.barberName] = { share: 0, barberiaShare: 0, generated: 0, services: 0 };
-                acc[r.barberName].share += r.barberShare;
-                acc[r.barberName].barberiaShare += r.barberiaShare;
-                acc[r.barberName].generated += r.totalAmount;
-                acc[r.barberName].services += 1;
-                return acc;
-              }, {} as Record<string, { share: number; barberiaShare: number; generated: number; services: number }>);
-              const barberEntries = Object.entries(earningsByBarber);
-              return (
-                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`}>
-                  {barberEntries.map(([name, data]) => (
-                    <div key={name} className="bg-surface-high/50 p-3 sm:p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                          <Scissors size={18} className="text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-white font-medium text-lg leading-tight uppercase tracking-wider font-display">{name}</p>
-                          <p className="text-text-muted text-[10px] uppercase tracking-wider">{data.services} servicio{data.services !== 1 ? "s" : ""}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3 flex-1 mb-5">
-                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                          <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbero <span className="text-text-muted/50 font-normal">(60%)</span></span>
-                          <span className="font-display text-xl text-emerald-400">${data.share.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                          <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbería <span className="text-text-muted/50 font-normal">(40%)</span></span>
-                          <span className="font-display text-xl text-blue-400">${data.barberiaShare.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-auto flex justify-between items-center bg-void/40 p-3 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
-                        <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <span className="text-white text-[10px] uppercase tracking-[0.2em] font-bold relative z-10">Total Generado</span>
-                        <span className="font-display text-2xl text-white relative z-10">${data.generated.toFixed(2)}</span>
-                      </div>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`}>
+              {barberEntries.map(([name, data]) => (
+                <div key={name} className="bg-surface-high/50 p-3 sm:p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 flex flex-col group w-full">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
+                      <Scissors size={18} className="text-primary" />
                     </div>
-                  ))}
-                  {barberEntries.length === 0 && (
-                    <div className="col-span-full flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
-                      <Wallet size={32} className="text-text-muted/30 mb-3" />
-                      <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas {timeFilter === "today" ? "hoy" : timeFilter === "week" ? "esta semana" : "este mes"}</p>
+                    <div>
+                      <p className="text-white font-medium text-lg leading-tight uppercase tracking-wider font-display">{name}</p>
+                      <p className="text-text-muted text-[10px] uppercase tracking-wider">{data.services} servicio{data.services !== 1 ? "s" : ""}</p>
                     </div>
-                  )}
+                  </div>
+                  
+                  <div className="space-y-3 flex-1 mb-5">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                      <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbero <span className="text-text-muted/50 font-normal">(60%)</span></span>
+                      <span className="font-display text-xl text-emerald-400">${data.share.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                      <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbería <span className="text-text-muted/50 font-normal">(40%)</span></span>
+                      <span className="font-display text-xl text-blue-400">${data.barberiaShare.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-auto flex justify-between items-center bg-void/40 p-3 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
+                    <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span className="text-white text-[10px] uppercase tracking-[0.2em] font-bold relative z-10">Total Generado</span>
+                    <span className="font-display text-2xl text-white relative z-10">${data.generated.toFixed(2)}</span>
+                  </div>
                 </div>
-              );
-            })()}
+              ))}
+              {barberEntries.length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
+                  <Wallet size={32} className="text-text-muted/30 mb-3" />
+                  <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas en la semana seleccionada</p>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Ranking Barberos */}
           <div className="card-premium p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="font-display text-lg sm:text-2xl text-text-primary flex items-center gap-3 tracking-[0.05em] uppercase">
                 <Users size={22} className="text-primary" />
-                RANKING <span className="text-primary">BARBEROS</span> <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">({rankingLabel})</span>
+                RANKING <span className="text-primary">BARBEROS</span>
               </h3>
-              <div className="flex bg-surface-high rounded-lg p-1 border border-white/5">
-                {(["today", "week", "month"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setRankingFilter(filter)}
-                    className={`px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-bold transition-all ${
-                      rankingFilter === filter
-                        ? "bg-primary text-white"
-                        : "text-text-muted hover:text-white"
-                    }`}
-                  >
-                    {filter === "today" ? "Hoy" : filter === "week" ? "Semana" : "Mes"}
-                  </button>
-                ))}
-              </div>
             </div>
             {topBarbers.length > 0 ? (
               <div className="space-y-3">
@@ -253,8 +275,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Servicios de la semana */}
         <div className="card-premium p-6">
-          <h3 className="font-display text-2xl text-text-primary mb-6 tracking-[0.05em] uppercase">SERVICIOS <span className="text-primary">RECIENTES</span></h3>
+          <h3 className="font-display text-2xl text-text-primary mb-6 tracking-[0.05em] uppercase">SERVICIOS DE LA <span className="text-primary">SEMANA</span></h3>
           
           {/* Vista Escritorio (Tabla) */}
           <div className="hidden md:block overflow-x-auto">
@@ -269,7 +292,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {todayRecords.slice(0, 5).map((r) => (
+                {weeklyFilteredRecords.slice(0, 10).map((r) => (
                   <TableRow key={r.id} className="hover:bg-surface-high/30">
                     <TableCell className="py-3 text-text-secondary">{r.date}</TableCell>
                     <TableCell className="py-3 text-text-primary">{r.barberName}</TableCell>
@@ -278,10 +301,10 @@ export default function DashboardPage() {
                     <TableCell className="py-3 text-primary text-right font-display">${r.totalAmount.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {todayRecords.length === 0 && (
+                {weeklyFilteredRecords.length === 0 && (
                   <TableRow className="hover:bg-transparent border-0">
                     <TableCell colSpan={5} className="py-8 text-center text-text-muted">
-                      No hay servicios registrados hoy
+                      No hay servicios en la semana seleccionada
                     </TableCell>
                   </TableRow>
                 )}
@@ -291,7 +314,7 @@ export default function DashboardPage() {
 
           {/* Vista Móvil (Tarjetas) */}
           <div className="md:hidden divide-y divide-white/5 -mx-6 -mb-6 border-t border-white/5">
-            {todayRecords.slice(0, 5).map((r) => (
+            {weeklyFilteredRecords.slice(0, 10).map((r) => (
               <div key={r.id} className="p-5 space-y-3">
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-1">
@@ -308,9 +331,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
-            {todayRecords.length === 0 && (
+            {weeklyFilteredRecords.length === 0 && (
               <div className="py-12 text-center text-text-muted uppercase tracking-widest text-[11px] opacity-50">
-                No hay servicios hoy
+                No hay servicios esta semana
               </div>
             )}
           </div>
@@ -319,7 +342,9 @@ export default function DashboardPage() {
     );
   }
 
-  // Vista de Barbero
+  // ══════════════════════════════════════
+  // ══  VISTA BARBERO  ═══════════════════
+  // ══════════════════════════════════════
   const accionesRapidas = [
     {
       label: "Registrar Servicio",
@@ -383,6 +408,11 @@ export default function DashboardPage() {
     },
   ];
 
+  // Datos semanales del barbero
+  const weeklyBarberShare = weeklyFilteredRecords.reduce((sum, r) => sum + r.barberShare, 0);
+  const weeklyBarberiaShare = weeklyFilteredRecords.reduce((sum, r) => sum + r.barberiaShare, 0);
+  const weeklyTotalRevenue = weeklyFilteredRecords.reduce((sum, r) => sum + r.totalAmount, 0);
+
   const stats = [
     { name: "Tus Ingresos Hoy", value: `$${barberDaily.toFixed(2)}`, icon: DollarSign, color: "text-emerald-400" },
     { name: "Tus Ingresos Semana", value: `$${weekRecords.reduce((s, r) => s + r.barberShare, 0).toFixed(2)}`, icon: TrendingUp, color: "text-blue-400" },
@@ -392,8 +422,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      
-
+      {/* Tarjetas de resumen rápido */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
@@ -441,14 +470,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Navegador semanal global */}
+      {navegadorSemanal}
+
       <div className="grid grid-cols-1 gap-6">
+        {/* Distribución de Ganancias */}
         <div className="card-premium p-6">
           <h3 className="font-display text-lg sm:text-2xl text-text-primary mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 tracking-[0.05em] uppercase">
             <Wallet size={22} className="text-primary" />
             DISTRIBUCIÓN DE <span className="text-primary">GANANCIAS</span>
-            <span className="text-text-muted text-sm ml-2 font-body opacity-50 tracking-tight lowercase font-medium italic">(Hoy)</span>
           </h3>
-          {todayRecords.length > 0 ? (
+          {weeklyFilteredRecords.length > 0 ? (
             <div className="bg-surface-high/50 p-5 rounded-xl border border-border-subtle hover:border-primary/30 transition-all duration-300 group w-full">
               <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px] gap-6 items-stretch">
                 <div className="flex items-center gap-3">
@@ -457,10 +489,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-display text-3xl text-white leading-none">
-                      {todayServices}
+                      {weeklyFilteredRecords.length}
                     </span>
                     <p className="text-text-secondary text-[11px] sm:text-xs uppercase tracking-[0.16em] font-semibold leading-none">
-                      servicio{todayServices !== 1 ? "s" : ""} hoy
+                      servicio{weeklyFilteredRecords.length !== 1 ? "s" : ""}
                     </p>
                   </div>
                 </div>
@@ -468,33 +500,34 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex justify-between items-center border border-white/5 rounded-lg bg-void/20 px-4 py-4">
                     <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Tu Parte <span className="text-text-muted/50 font-normal">(60%)</span></span>
-                    <span className="font-display text-2xl text-emerald-400">${barberDaily.toFixed(2)}</span>
+                    <span className="font-display text-2xl text-emerald-400">${weeklyBarberShare.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center border border-white/5 rounded-lg bg-void/20 px-4 py-4">
                     <span className="text-text-secondary text-[11px] uppercase tracking-widest font-bold">Barbería <span className="text-text-muted/50 font-normal">(40%)</span></span>
-                    <span className="font-display text-2xl text-blue-400">${barberiaDaily.toFixed(2)}</span>
+                    <span className="font-display text-2xl text-blue-400">${weeklyBarberiaShare.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="mt-auto flex justify-between items-center bg-void/40 p-4 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
                   <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <span className="text-white text-[10px] uppercase tracking-[0.2em] font-bold relative z-10">Total Generado</span>
-                  <span className="font-display text-3xl text-white relative z-10">${dailyRevenue.toFixed(2)}</span>
+                  <span className="font-display text-3xl text-white relative z-10">${weeklyTotalRevenue.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center bg-surface-high/20 rounded-xl border border-white/5 border-dashed">
               <Wallet size={32} className="text-text-muted/30 mb-3" />
-              <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas {timeFilter === "today" ? "hoy" : timeFilter === "week" ? "esta semana" : "este mes"}</p>
+              <p className="text-text-muted text-sm uppercase tracking-widest font-bold text-[10px]">No hay ganancias registradas en la semana seleccionada</p>
             </div>
           )}
         </div>
 
+        {/* Tus Servicios de la Semana */}
         <div className="card-premium p-6">
           <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
             <History size={22} className="text-primary" />
-            TUS SERVICIOS DE <span className="text-primary">HOY</span>
+            TUS SERVICIOS DE LA <span className="text-primary">SEMANA</span>
           </h3>
 
           {/* Vista Escritorio (Tabla) */}
@@ -509,7 +542,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {todayRecords.map((r) => (
+                {weeklyFilteredRecords.map((r) => (
                   <TableRow key={r.id} className="hover:bg-surface-high/30">
                     <TableCell className="py-3 text-text-secondary">{r.date}</TableCell>
                     <TableCell className="py-3 text-text-primary">{r.serviceName}</TableCell>
@@ -517,10 +550,10 @@ export default function DashboardPage() {
                     <TableCell className="py-3 text-emerald-400 text-right font-display">${r.barberShare.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {todayRecords.length === 0 && (
+                {weeklyFilteredRecords.length === 0 && (
                   <TableRow className="hover:bg-transparent border-0">
                     <TableCell colSpan={4} className="py-8 text-center text-text-muted">
-                      No has registrado servicios hoy
+                      No hay servicios en la semana seleccionada
                     </TableCell>
                   </TableRow>
                 )}
@@ -530,7 +563,7 @@ export default function DashboardPage() {
 
           {/* Vista Móvil (Tarjetas) */}
           <div className="md:hidden divide-y divide-white/5 -mx-6 -mb-6 border-t border-white/5">
-            {todayRecords.map((r) => (
+            {weeklyFilteredRecords.map((r) => (
               <div key={r.id} className="p-5 space-y-3">
                 <div className="flex justify-between items-start gap-4">
                   <div>
@@ -547,9 +580,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
-            {todayRecords.length === 0 && (
+            {weeklyFilteredRecords.length === 0 && (
               <div className="py-12 text-center text-text-muted uppercase tracking-widest text-[11px] opacity-50">
-                No has registrado servicios
+                No hay servicios esta semana
               </div>
             )}
           </div>

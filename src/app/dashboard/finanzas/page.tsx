@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { type FinancialRecord, SERVICES, type Service } from "@/lib/types";
 import { 
@@ -30,11 +30,13 @@ import {
   Pencil,
   Trash2,
   X,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw
 } from "lucide-react";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select } from "@/components/ui";
-import { getLocalDateString, getStartOfWeekString, getStartOfMonthString } from "@/lib/utils";
+import { getLocalDateString, getWeekRangeFromOffset } from "@/lib/utils";
 
 interface Transaccion {
   id: string;
@@ -54,8 +56,12 @@ export default function FinanzasPage() {
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [periodFilter, setPeriodFilter] = useState<"day" | "week" | "month">("week");
-  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [semanaOffset, setSemanaOffset] = useState(0);
+  const esSemanaActual = semanaOffset === 0;
+  const rangoSemana = useMemo(() => getWeekRangeFromOffset(semanaOffset), [semanaOffset]);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const REGISTROS_POR_PAGINA = 10;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,20 +70,6 @@ export default function FinanzasPage() {
   const [recordToDelete, setRecordToDelete] = useState<FinancialRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Actualizar la fecha seleccionada automáticamente a medianoche si el filtro es "hoy"
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const today = getLocalDateString();
-      if (periodFilter === "day" && selectedDate !== today) {
-        // Solo actualizamos si el usuario no ha cambiado manualmente la fecha
-        // (En este caso, setSelectedDate se usa tanto para el 'Hoy' por defecto como para el DatePicker)
-        // Para simplificar y cumplir el requerimiento de "limpieza automática", 
-        // si es un nuevo día, reseteamos a ese día.
-        setSelectedDate(today);
-      }
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [periodFilter, selectedDate]);
 
 
   // Estado para Edición
@@ -162,23 +154,9 @@ export default function FinanzasPage() {
     return () => unsubscribe();
   }, [isAdmin]);
 
-  const getFilteredRecords = () => {
-    const startOfWeek = getStartOfWeekString();
-    const startOfMonth = getStartOfMonthString();
-    
-    return records.filter(record => {
-      if (periodFilter === "day") {
-        return record.date === selectedDate;
-      } else if (periodFilter === "week") {
-        return record.date >= startOfWeek;
-      } else if (periodFilter === "month") {
-        return record.date >= startOfMonth;
-      }
-      return true;
-    });
-  };
-
-  const filteredRecords = getFilteredRecords();
+  const filteredRecords = useMemo(() => {
+    return records.filter(r => r.date >= rangoSemana.inicio && r.date <= rangoSemana.fin);
+  }, [records, rangoSemana]);
 
   const totalRevenue = filteredRecords.reduce((sum: number, r: FinancialRecord) => sum + r.totalAmount, 0);
   const barberShare = filteredRecords.reduce((sum: number, r: FinancialRecord) => sum + r.barberShare, 0);
@@ -195,36 +173,21 @@ export default function FinanzasPage() {
     .filter((t) => t.tipo === "gasto")
     .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
 
-  // Filtered transactions for period cards
-  const getFilteredTransacciones = () => {
-    const startOfWeek = getStartOfWeekString();
-    const startOfMonth = getStartOfMonthString();
-    
+  // Transacciones filtradas por semana seleccionada
+  const filteredTransacciones = useMemo(() => {
     return transacciones.filter(t => {
-      // Usar la fecha de creación normalizada a Venezuela
       let txDate: Date;
       if (t.creadoAt?.toDate) {
         txDate = t.creadoAt.toDate();
       } else if (t.creadoAt instanceof Date) {
         txDate = t.creadoAt;
       } else {
-        return true;
+        return false;
       }
-
       const txDateStr = getLocalDateString(txDate);
-
-      if (periodFilter === "day") {
-        return txDateStr === selectedDate;
-      } else if (periodFilter === "week") {
-        return txDateStr >= startOfWeek;
-      } else if (periodFilter === "month") {
-        return txDateStr >= startOfMonth;
-      }
-      return true;
+      return txDateStr >= rangoSemana.inicio && txDateStr <= rangoSemana.fin;
     });
-  };
-
-  const filteredTransacciones = getFilteredTransacciones();
+  }, [transacciones, rangoSemana]);
 
   const ingresos = filteredTransacciones
     .filter((t) => t.tipo === "acta")
@@ -233,6 +196,45 @@ export default function FinanzasPage() {
   const egresos = filteredTransacciones
     .filter((t) => t.tipo === "gasto")
     .reduce((acc: number, curr: Transaccion) => acc + curr.monto, 0);
+
+  // Desglose por barbero para el componente de ingresos de la semana
+  const desgloseBarbers = useMemo(() => {
+    const desglose = filteredRecords.reduce((acc, r) => {
+      if (!acc[r.barberName]) {
+        acc[r.barberName] = { barberShare: 0, barberiaShare: 0, total: 0 };
+      }
+      acc[r.barberName].barberShare += r.barberShare;
+      acc[r.barberName].barberiaShare += r.barberiaShare;
+      acc[r.barberName].total += r.totalAmount;
+      return acc;
+    }, {} as Record<string, { barberShare: number; barberiaShare: number; total: number }>);
+
+    // Asegurar que todos los barberos registrados aparezcan (si es admin)
+    if (isAdmin) {
+      barbers.forEach((barber: any) => {
+        if (!desglose[barber.name]) {
+          desglose[barber.name] = { barberShare: 0, barberiaShare: 0, total: 0 };
+        }
+      });
+    }
+
+    return desglose;
+  }, [filteredRecords, barbers, isAdmin]);
+
+  const maxBarValue = Math.max(
+    ...Object.entries(desgloseBarbers).flatMap(([, b]) => [b.barberShare, b.barberiaShare]),
+    1
+  );
+
+  const totalPaginas = Math.ceil(filteredRecords.length / REGISTROS_POR_PAGINA);
+  const registrosPaginados = useMemo(() => {
+    const inicio = (paginaActual - 1) * REGISTROS_POR_PAGINA;
+    return filteredRecords.slice(inicio, inicio + REGISTROS_POR_PAGINA);
+  }, [filteredRecords, paginaActual]);
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [semanaOffset, filteredRecords.length]);
 
   const handleRegisterService = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -677,62 +679,61 @@ export default function FinanzasPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
-        {/* Card Filtros Período (Bento Style) */}
-        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40 md:col-span-1 lg:col-span-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] mb-0.5">Control de Periodos</p>
-              <h2 className="font-display text-xl text-white tracking-widest uppercase">Rendimiento</h2>
-            </div>
-            
-            <div className="flex bg-void/50 rounded-lg p-0.5 border border-white/5 w-full sm:w-auto h-fit">
-              <button 
-                onClick={() => setPeriodFilter("day")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "day" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
-              >
-                Hoy
-              </button>
-              <button 
-                onClick={() => setPeriodFilter("week")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "week" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
-              >
-                Semana
-              </button>
-              <button 
-                onClick={() => setPeriodFilter("month")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-md font-display text-[11px] font-bold tracking-widest uppercase transition-all ${periodFilter === "month" ? "bg-primary/20 text-white border border-primary/30 shadow-red-glow" : "text-text-secondary hover:text-white"}`}
-              >
-                Mes
-              </button>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            {periodFilter === "day" && (
-              <div className="w-full sm:w-64">
-                <DatePicker
-                  value={selectedDate}
-                  onChange={(v) => setSelectedDate(v)}
-                  placeholder="Seleccionar fecha"
-                />
-              </div>
-            )}
-            
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="lg:hidden btn-primary text-xs py-3 w-full flex items-center justify-center gap-2"
-            >
-              <Plus size={16} /> Registrar Servicio
-            </button>
+      {/* Navegador semanal */}
+      <div className="card-premium p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-4">
+          <button
+            onClick={() => setSemanaOffset((prev) => prev - 1)}
+            className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 transition-all"
+            aria-label="Semana anterior"
+          >
+            <ChevronLeft size={18} />
+          </button>
 
-            <div className="hidden lg:flex items-center gap-2 text-text-muted/60">
-              <TrendingUp size={14} className="text-emerald-500" />
-              <p className="text-[10px] uppercase font-bold tracking-widest">Punto de control financiero activo</p>
-            </div>
+          <div className="flex flex-col items-center gap-1.5 min-w-0">
+            {esSemanaActual && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.15em] shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Semana actual
+              </span>
+            )}
+            <span className="font-display text-sm sm:text-base text-white tracking-widest uppercase text-center">
+              {rangoSemana.label}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!esSemanaActual && (
+              <button
+                onClick={() => setSemanaOffset(0)}
+                className="p-2.5 rounded-lg border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 active:scale-95 transition-all"
+                aria-label="Ir a semana actual"
+                title="Ir a semana actual"
+              >
+                <RotateCcw size={16} />
+              </button>
+            )}
+            <button
+              onClick={() => setSemanaOffset((prev) => prev + 1)}
+              disabled={esSemanaActual}
+              className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
         </div>
 
+        {/* Botón registrar servicio (solo móvil) */}
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="lg:hidden btn-primary text-xs py-3 w-full flex items-center justify-center gap-2 mt-4"
+        >
+          <Plus size={16} /> Registrar Servicio
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {/* Card Servicios Count */}
         <div className="card-premium p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
@@ -762,6 +763,35 @@ export default function FinanzasPage() {
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">60% de Comisiones</p>
           </div>
         </div>
+
+        {/* Card Barbería (40%) */}
+        <div className="card-premium p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
+              <Wallet size={24} />
+            </div>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Barbería</p>
+          </div>
+          <div className="mt-auto">
+            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${barberiaShare.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{barberiaShare.toFixed(2).split('.')[1]}</span></p>
+            <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">40% de Comisiones</p>
+          </div>
+        </div>
+
+        {/* Card Total Generado */}
+        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
+              <TrendingUp size={24} />
+            </div>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Total Generado</p>
+          </div>
+          <div className="mt-auto">
+            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
+            <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">Ingreso bruto semanal</p>
+          </div>
+        </div>
+
         {isAdmin && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up col-span-full">
           <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
@@ -772,12 +802,14 @@ export default function FinanzasPage() {
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Egresos (Gastos)</p>
             <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
           </div>
-          <div className="card-premium p-6 border-l-4 border-l-primary">
-            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Barbería (40%)</p>
-            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${barberiaShare.toFixed(2)}</p>
+          <div className="card-premium p-6 border-l-4 border-l-cyan-500/80">
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Semanal</p>
+            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">
+              ${(ingresos + barberiaShare - egresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(ingresos + barberiaShare - egresos).toFixed(2).split('.')[1]}</span>
+            </p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-primary-light bg-linear-to-br from-primary/10 to-transparent">
-            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Neto</p>
+            <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Neto Global</p>
             <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">
               ${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span>
             </p>
@@ -786,51 +818,68 @@ export default function FinanzasPage() {
       )}
       </div>
 
-      {Object.keys(revenueByService).length > 0 && (
-        <div className="card-premium overflow-hidden animate-fade-in-up max-w-5xl mx-auto lg:mx-0">
-          <div className="p-5 border-b border-white/5 bg-white/1">
-            <h3 className="font-display text-lg text-white tracking-widest uppercase">Ganancias por Servicio</h3>
+      {/* Componente: Ingresos de la semana (Barberas Breakdown) */}
+      <div className="card-premium p-6 sm:p-8 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+          <div>
+            <h3 className="font-display text-2xl text-white tracking-[0.05em] uppercase">
+              Ingresos de la <span className="text-primary">semana</span>
+            </h3>
+            <p className="text-text-muted text-sm">
+              Comparativa entre lo generado para cada barbero y lo correspondiente a la barbería.
+            </p>
           </div>
-          
-          {/* Vista Escritorio (Tabla) */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-0 hover:bg-transparent">
-                  <TableHead>Servicio</TableHead>
-                  <TableHead>Citas</TableHead>
-                  <TableHead>Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(revenueByService).map(([service, amount]) => (
-                  <TableRow key={service}>
-                    <TableCell className="text-white text-sm font-medium">{service}</TableCell>
-                    <TableCell className="text-text-secondary text-sm">{serviceCount[service]}</TableCell>
-                    <TableCell className="text-primary font-display text-lg tracking-wider">${amount.toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <span className="text-white font-display text-lg tracking-wider">
+            Total ${totalRevenue.toFixed(2)}
+          </span>
+        </div>
 
-          {/* Vista Móvil (Tarjetas) */}
-          <div className="md:hidden divide-y divide-white/5">
-            {Object.entries(revenueByService).map(([service, amount]) => (
-              <div key={service} className="p-5 flex justify-between items-center bg-void/20">
-                <div>
-                  <p className="text-white font-medium text-sm tracking-wide">{service}</p>
-                  <p className="text-text-muted text-[10px] uppercase font-bold mt-1">{serviceCount[service]} cita{serviceCount[service] !== 1 ? "s" : ""}</p>
+        <div className="space-y-8">
+          {Object.entries(desgloseBarbers)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([barberName, stats]) => (
+              <div key={barberName} className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-px flex-1 bg-white/5"></div>
+                  <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
+                  <div className="h-px flex-1 bg-white/5"></div>
                 </div>
-                <div className="text-right">
-                  <p className="font-display text-lg text-primary tracking-widest">${amount.toFixed(2)}</p>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                    <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                      Personal
+                    </span>
+                    <div className="h-2.5 bg-void/40 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                      <div
+                        className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000 shadow-emerald-glow"
+                        style={{ width: `${maxBarValue > 0 ? (stats.barberShare / maxBarValue) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                      ${stats.barberShare.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                    <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                      Barbería
+                    </span>
+                    <div className="h-2.5 bg-void/40 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                      <div
+                        className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000 shadow-cyan-glow"
+                        style={{ width: `${maxBarValue > 0 ? (stats.barberiaShare / maxBarValue) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                      ${stats.barberiaShare.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
-          </div>
         </div>
-      )}
-
+      </div>
       <div className="card-premium overflow-hidden animate-fade-in-up">
         <div className="p-6 border-b border-white/5">
           <h3 className="font-display text-xl text-white tracking-widest uppercase">Historial de Servicios</h3>
@@ -852,7 +901,7 @@ export default function FinanzasPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRecords.slice(0, 20).map((record) => (
+              {registrosPaginados.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell className="text-text-secondary text-sm">{record.date}</TableCell>
                   {isAdmin && <TableCell className="text-white text-sm font-medium">{record.barberName}</TableCell>}
@@ -887,7 +936,7 @@ export default function FinanzasPage() {
 
         {/* Vista Móvil (Tarjetas PREMIUM) */}
         <div className="md:hidden divide-y divide-white/5">
-          {filteredRecords.slice(0, 20).map((record) => (
+          {registrosPaginados.map((record) => (
             <div key={record.id} className="p-5 space-y-4 bg-void/10 hover:bg-void/30 transition-colors">
               <div className="flex justify-between items-start gap-4">
                 <div className="space-y-1">
@@ -946,6 +995,36 @@ export default function FinanzasPage() {
           <div className="flex flex-col items-center justify-center py-16 text-text-muted">
             <Wallet size={48} className="text-surface-highest mb-4" />
             <p className="text-sm font-display tracking-widest uppercase">No hay servicios registrados</p>
+          </div>
+        )}
+
+        {/* Controles de Paginación */}
+        {totalPaginas > 1 && (
+          <div className="p-4 border-t border-white/5 bg-void/30 flex items-center justify-between gap-4">
+            <button
+              onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+              disabled={paginaActual === 1}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-text-muted hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-all text-xs font-bold uppercase tracking-wider"
+            >
+              <ChevronLeft size={16} />
+              <span className="hidden sm:inline">Anterior</span>
+            </button>
+
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] text-text-muted font-bold uppercase tracking-[0.2em] opacity-50">Historial</span>
+              <p className="text-white font-display text-sm tracking-widest whitespace-nowrap">
+                Página {paginaActual} <span className="text-text-muted mx-1">/</span> {totalPaginas}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-text-muted hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-all text-xs font-bold uppercase tracking-wider"
+            >
+              <span className="hidden sm:inline">Siguiente</span>
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </div>
