@@ -12,9 +12,10 @@ import {
   where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { DollarSign, Users, Scissors, TrendingUp, Activity, Wallet, CalendarDays, Target, BarChart3, ArrowRight, History, ChevronLeft, ChevronRight, RotateCcw, Plus } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui";
 import { getLocalDateString, getStartOfWeekString, getStartOfMonthString, getWeekRangeFromOffset } from "@/lib/utils";
+import RegisterServiceModal from "@/components/RegisterServiceModal";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [today, setToday] = useState(getLocalDateString());
   const [loading, setLoading] = useState(true);
   const [semanaOffset, setSemanaOffset] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const esSemanaActual = semanaOffset === 0;
   const rangoSemana = useMemo(() => getWeekRangeFromOffset(semanaOffset), [semanaOffset]);
@@ -169,6 +171,8 @@ export default function DashboardPage() {
     const barberEntries = Object.entries(earningsByBarber);
 
     return (
+      <>
+      <RegisterServiceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <div className="space-y-8">
         {/* Tarjetas de resumen rápido */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
@@ -188,6 +192,16 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Botón Registrar Servicio */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn-primary flex items-center gap-2 px-6 py-3 text-xs tracking-[0.2em] font-bold uppercase shadow-red-strong hover:-translate-y-0.5 transition-all"
+          >
+            <Plus size={16} /> Registrar Servicio
+          </button>
         </div>
 
         {/* Navegador semanal global */}
@@ -339,6 +353,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
@@ -421,6 +436,8 @@ export default function DashboardPage() {
   ];
 
   return (
+    <>
+    <RegisterServiceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     <div className="space-y-8">
       {/* Tarjetas de resumen rápido */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-children">
@@ -587,7 +604,8 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  );
-}
+      </>
+    );
+  }
