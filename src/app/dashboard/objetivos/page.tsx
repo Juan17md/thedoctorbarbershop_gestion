@@ -255,11 +255,11 @@ export default function ObjetivosPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/4 px-4 py-3">
                     <p className="text-[10px] font-bold tracking-[0.2em] text-text-muted uppercase mb-2">Meta</p>
-                    <p className="font-display text-2xl text-emerald-400 tracking-wide">${obj.targetAmount}</p>
+                    <p className="font-display text-2xl text-emerald-400 tracking-wide">${obj.targetAmount.toFixed(2)}</p>
                   </div>
                   <div className="rounded-xl border border-blue-500/15 bg-blue-500/4 px-4 py-3">
                     <p className="text-[10px] font-bold tracking-[0.2em] text-text-muted uppercase mb-2">Actual</p>
-                    <p className="font-display text-2xl text-blue-400 tracking-wide">${obj.currentAmount}</p>
+                    <p className="font-display text-2xl text-blue-400 tracking-wide">${obj.currentAmount.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="relative">
