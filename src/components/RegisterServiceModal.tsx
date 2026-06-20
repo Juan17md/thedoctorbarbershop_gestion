@@ -91,7 +91,7 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
         ? barbers.find((b) => b.id === formData.barberId) || userRole
         : userRole;
 
-    if (!finalBarberId) {
+    if (!finalBarberId || !finalBarber) {
       alert("Debes seleccionar un barbero");
       return;
     }
