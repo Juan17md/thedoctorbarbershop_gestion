@@ -195,7 +195,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Botón Registrar Servicio */}
-        <div className="flex justify-end">
+        <div className="flex justify-center sm:justify-end">
           <button
             onClick={() => setIsModalOpen(true)}
             className="btn-primary flex items-center gap-2 px-6 py-3 text-xs tracking-[0.2em] font-bold uppercase shadow-red-strong hover:-translate-y-0.5 transition-all"
