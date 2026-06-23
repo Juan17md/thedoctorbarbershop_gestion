@@ -735,12 +735,12 @@ export default function FinanzasPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {/* Card Servicios Count */}
-        <div className="card-premium p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-void/50 border border-white/5 flex items-center justify-center text-primary shadow-inner">
-              <Scissors size={24} />
+        <div className="card-premium p-4 sm:p-6 flex flex-col justify-between">
+          <div className="flex items-center gap-2 sm:gap-0 sm:justify-between mb-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-void/50 border border-white/5 flex items-center justify-center text-primary shadow-inner shrink-0">
+              <Scissors size={16} />
             </div>
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Servicios</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.15em] sm:tracking-[0.2em]">Servicios</p>
           </div>
           <div className="mt-auto">
             <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">{filteredRecords.length}</p>
@@ -751,12 +751,12 @@ export default function FinanzasPage() {
         </div>
 
         {/* Card Ingreso Barbero (60%) / Tu Parte */}
-        <div className="card-premium p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
-              <DollarSign size={24} />
+        <div className="card-premium p-4 sm:p-6 flex flex-col justify-between">
+          <div className="flex items-center gap-2 sm:gap-0 sm:justify-between mb-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner shrink-0">
+              <DollarSign size={16} />
             </div>
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">{isAdmin ? "Ingreso Barberos" : "Tu Parte"}</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.15em] sm:tracking-[0.2em]">{isAdmin ? "Ingreso Barberos" : "Tu Parte"}</p>
           </div>
           <div className="mt-auto">
             <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${barberShare.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{barberShare.toFixed(2).split('.')[1]}</span></p>
@@ -765,12 +765,12 @@ export default function FinanzasPage() {
         </div>
 
         {/* Card Barbería (40%) */}
-        <div className="card-premium p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
-              <Wallet size={24} />
+        <div className="card-premium p-4 sm:p-6 flex flex-col justify-between">
+          <div className="flex items-center gap-2 sm:gap-0 sm:justify-between mb-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner shrink-0">
+              <Wallet size={16} />
             </div>
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Barbería</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.15em] sm:tracking-[0.2em]">Barbería</p>
           </div>
           <div className="mt-auto">
             <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${barberiaShare.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{barberiaShare.toFixed(2).split('.')[1]}</span></p>
@@ -779,12 +779,12 @@ export default function FinanzasPage() {
         </div>
 
         {/* Card Total Generado */}
-        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-l-primary/40">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-              <TrendingUp size={24} />
+        <div className="card-premium p-4 sm:p-6 flex flex-col justify-between border-l-4 border-l-primary/40">
+          <div className="flex items-center gap-2 sm:gap-0 sm:justify-between mb-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner shrink-0">
+              <TrendingUp size={16} />
             </div>
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Total Generado</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.15em] sm:tracking-[0.2em]">Total Generado</p>
           </div>
           <div className="mt-auto">
             <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
