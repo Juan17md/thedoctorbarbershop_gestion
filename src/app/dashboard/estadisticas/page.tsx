@@ -292,8 +292,8 @@ export default function EstadisticasPage() {
                 <p className="font-display text-3xl text-white mt-1">{totalServices}</p>
               </div>
               <div className="text-center">
-                <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] opacity-70">Ticket Promedio</p>
-                <p className="font-display text-3xl text-white mt-1">${avgTicket.toFixed(2)}</p>
+                <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] opacity-70">Aporte a la Barbería</p>
+                <p className="font-display text-3xl text-cyan-400 mt-1">${ingresosBarberia.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -301,6 +301,7 @@ export default function EstadisticasPage() {
       )}
 
 
+      {isAdmin && (
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <div className="card-premium p-4 md:p-6 min-h-[140px] md:min-h-[170px] flex flex-col justify-between">
           <div className="flex items-center gap-2 md:gap-3">
@@ -358,6 +359,7 @@ export default function EstadisticasPage() {
           </p>
         </div>
       </div>
+      )}
 
       {(topService || (isAdmin && topBarber)) && (
         <div className={`grid grid-cols-1 gap-6 ${isAdmin && topBarber ? "xl:grid-cols-[1.3fr_0.9fr]" : ""}`}>
