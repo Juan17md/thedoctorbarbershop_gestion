@@ -35,6 +35,7 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
   const [serviciosDisponibles, setServiciosDisponibles] = useState<Service[]>(SERVICES);
   const [barbers, setBarbers] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({ serviceId: "", clientName: "", barberId: "" });
+  const [montoPersonalizado, setMontoPersonalizado] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -98,7 +99,12 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
 
     setIsSubmitting(true);
     try {
-      const totalAmount = service.price;
+      const totalAmount = montoPersonalizado ? parseFloat(montoPersonalizado) : service.price;
+      if (!totalAmount || totalAmount <= 0) {
+        alert("El monto a cobrar es inválido");
+        setIsSubmitting(false);
+        return;
+      }
       const barberShareAmount = totalAmount * 0.6;
       const barberiaShareAmount = totalAmount * 0.4;
       const date = getLocalDateString();
@@ -215,6 +221,7 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
 
       onClose();
       setFormData({ serviceId: "", clientName: "", barberId: "" });
+      setMontoPersonalizado("");
     } catch (error) {
       console.error("Error al registrar el servicio:", error);
       alert("Hubo un error al registrar el servicio. Por favor intenta nuevamente.");
@@ -261,13 +268,25 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
             <Select
               options={serviciosDisponibles.map((s) => ({
                 value: s.id,
-                label: `$${s.price.toFixed(2)} - ${s.name}`,
+                label: s.name,
               }))}
               value={formData.serviceId}
-              onChange={(val: string) => setFormData({ ...formData, serviceId: val })}
+              onChange={(val: string) => {
+                setFormData({ ...formData, serviceId: val });
+                const servicio = serviciosDisponibles.find((s) => s.id === val);
+                if (servicio) setMontoPersonalizado(servicio.price.toFixed(2));
+              }}
               placeholder="Seleccionar servicio..."
               className="bg-void/50 border-white/10 rounded-md"
             />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">
+              Monto a Cobrar
+            </label>
+            <div className="w-full bg-void/50 border border-emerald-500/20 rounded-md px-4 py-4 text-emerald-400 font-display text-2xl tracking-wider text-center">
+              {montoPersonalizado ? `$${parseFloat(montoPersonalizado).toFixed(2)}` : "$0.00"}
+            </div>
           </div>
           <div>
             <label className="block text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2">
@@ -287,6 +306,7 @@ export default function RegisterServiceModal({ isOpen, onClose }: RegisterServic
               onClick={() => {
                 onClose();
                 setFormData({ serviceId: "", clientName: "", barberId: "" });
+                setMontoPersonalizado("");
               }}
               className="flex-1 px-4 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-white transition-colors border border-white/5 bg-white/5"
             >
