@@ -811,7 +811,7 @@ export default function FinanzasPage() {
           <div className="card-premium p-6 border-l-4 border-l-primary-light bg-linear-to-br from-primary/10 to-transparent">
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Neto Global</p>
             <p className="font-display text-2xl sm:text-3xl text-white font-bold tracking-tight leading-none">
-              ${(totalRevenue + barberiaShare - totalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(totalRevenue + barberiaShare - totalEgresos).toFixed(2).split('.')[1]}</span>
+              ${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span>
             </p>
           </div>
         </div>
