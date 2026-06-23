@@ -203,68 +203,102 @@ export default function EstadisticasPage() {
         </div>
       </div>
 
-      <div className="card-premium p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
-          <div>
-            <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
-              Ingresos de la <span className="text-primary">semana</span>
-            </h3>
-            <p className="text-text-muted text-sm">
-              Comparativa entre lo generado para cada barbero y lo correspondiente a la barbería.
-            </p>
+      {isAdmin ? (
+        <div className="card-premium p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+            <div>
+              <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
+                Ingresos de la <span className="text-primary">semana</span>
+              </h3>
+              <p className="text-text-muted text-sm">
+                Comparativa entre lo generado para cada barbero y lo correspondiente a la barbería.
+              </p>
+            </div>
+            <span className="text-white font-display text-lg tracking-wider">
+              Total ${totalRevenue.toFixed(2)}
+            </span>
           </div>
-          <span className="text-white font-display text-lg tracking-wider">
-            Total ${totalRevenue.toFixed(2)}
-          </span>
+
+          <div className="space-y-8">
+            {Object.entries(desgloseBarbers)
+              .filter(([name]) => barbersList.some((b) => b.name === name))
+              .sort((a, b) => b[1].total - a[1].total)
+              .map(([barberName, stats]) => (
+                <div key={barberName} className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1 bg-white/5"></div>
+                    <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
+                    <div className="h-px flex-1 bg-white/5"></div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                      <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                        Personal
+                      </span>
+                      <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
+                          style={{ width: `${maxBarValue > 0 ? (stats.barberShare / maxBarValue) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                        ${stats.barberShare.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
+                      <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
+                        Barbería
+                      </span>
+                      <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
+                          style={{ width: `${maxBarValue > 0 ? (stats.barberiaShare / maxBarValue) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
+                        ${stats.barberiaShare.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
+      ) : (
+        <div className="card-premium p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+            <div>
+              <h3 className="font-display text-2xl text-text-primary tracking-[0.05em] uppercase">
+                Tus ingresos de la <span className="text-primary">semana</span>
+              </h3>
+              <p className="text-text-muted text-sm">
+                Resumen de tu rendimiento personal en la semana seleccionada.
+              </p>
+            </div>
+          </div>
 
-        <div className="space-y-8">
-          {Object.entries(desgloseBarbers)
-            .filter(([name]) => barbersList.some((b) => b.name === name))
-            .sort((a, b) => b[1].total - a[1].total)
-            .map(([barberName, stats]) => (
-              <div key={barberName} className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-px flex-1 bg-white/5"></div>
-                  <span className="text-white/80 font-display text-[13px] uppercase tracking-[0.2em]">{barberName}</span>
-                  <div className="h-px flex-1 bg-white/5"></div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
-                    <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.18em]">
-                      Personal
-                    </span>
-                    <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                      <div
-                        className="h-full bg-linear-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxBarValue > 0 ? (stats.barberShare / maxBarValue) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${stats.barberShare.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_110px] items-center gap-3">
-                    <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.18em]">
-                      Barbería
-                    </span>
-                    <div className="h-2.5 bg-surface-high rounded-full overflow-hidden border border-white/5">
-                      <div
-                        className="h-full bg-linear-to-r from-cyan-700 to-cyan-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${maxBarValue > 0 ? (stats.barberiaShare / maxBarValue) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white font-display text-lg text-left md:text-right tracking-wider">
-                      ${stats.barberiaShare.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+          <div className="flex flex-col items-center justify-center py-8 gap-6">
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-2 opacity-70">Tu Parte</p>
+              <p className="font-display text-6xl sm:text-7xl text-emerald-400 tracking-wider leading-none">
+                ${ingresosBarbero.toFixed(2).split('.')[0]}<span className="text-3xl sm:text-4xl opacity-60">.{ingresosBarbero.toFixed(2).split('.')[1]}</span>
+              </p>
+            </div>
+            <div className="w-full max-w-md grid grid-cols-2 gap-6 pt-4 border-t border-white/5">
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] opacity-70">Servicios</p>
+                <p className="font-display text-3xl text-white mt-1">{totalServices}</p>
               </div>
-            ))}
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] opacity-70">Ticket Promedio</p>
+                <p className="font-display text-3xl text-white mt-1">${avgTicket.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
