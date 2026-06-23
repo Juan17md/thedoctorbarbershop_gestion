@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
   manifest: "/manifest.json",
   icons: {
+    icon: "/favicon.png",
     apple: "/icon-192x192.png",
   },
 };
