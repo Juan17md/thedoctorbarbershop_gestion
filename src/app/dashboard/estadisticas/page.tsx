@@ -148,8 +148,8 @@ export default function EstadisticasPage() {
     <div className="space-y-8">
       <div className="card-premium p-4 sm:p-5">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center items-center sm:justify-between gap-2">
+            <div className="text-center sm:text-left">
               <p className="text-text-muted text-[10px] font-bold tracking-[0.25em] uppercase opacity-70">
                 Vista general
               </p>
