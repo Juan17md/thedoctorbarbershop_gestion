@@ -488,7 +488,7 @@ export default function HistorialPage() {
       <div className="card-premium p-4 md:p-5 space-y-4">
         {/* Navegador semanal */}
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between font-display">
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="order-2 sm:order-none flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setSemanaOffset((prev) => prev - 1)}
               className="p-2.5 rounded-lg border border-white/10 text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 active:scale-95 transition-all"
@@ -514,7 +514,7 @@ export default function HistorialPage() {
             </button>
           </div>
 
-          <div className="flex items-center">
+          <div className="order-1 sm:order-none flex items-center">
             {esSemanaActual ? (
               <span className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                 Semana actual
@@ -532,8 +532,8 @@ export default function HistorialPage() {
         </div>
 
         {/* Búsqueda y filtros avanzados */}
-        <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3 items-center">
-          <div className="md:flex-1">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 items-center">
+          <div className="col-span-2 md:flex-1">
             <SearchInput
               value={busqueda}
               onChange={setBusqueda}
@@ -541,9 +541,9 @@ export default function HistorialPage() {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="col-span-2 flex flex-row gap-3">
             {esAdmin && (
-              <div className="flex-1 sm:min-w-[170px]">
+              <div className="flex-1 min-w-0">
                 <Select
                   options={[
                     { value: "todos", label: "Todos los barberos" },
@@ -556,7 +556,7 @@ export default function HistorialPage() {
               </div>
             )}
 
-            <div className="flex-1 sm:min-w-[170px]">
+            <div className="flex-1 min-w-0">
               <Select
                 options={[
                   { value: "todos", label: "Todos los servicios" },
@@ -572,9 +572,9 @@ export default function HistorialPage() {
           {hayFiltrosActivos && (
             <button
               onClick={limpiarFiltros}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-white border border-white/10 hover:border-white/20 transition-all w-full md:w-auto"
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm text-text-muted hover:text-white border border-white/10 hover:border-white/20 transition-all w-full md:w-auto text-[10px]"
             >
-              <X size={14} />
+              <X size={12} />
               <span className="md:hidden lg:inline">Limpiar</span>
             </button>
           )}

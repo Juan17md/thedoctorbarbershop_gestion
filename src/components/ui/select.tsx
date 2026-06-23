@@ -91,7 +91,7 @@ export function Select({
         aria-haspopup="listbox"
         aria-controls={listId}
         className={cn(
-          "group flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-all duration-300",
+          "group flex w-full items-center justify-between rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3.5 text-xs sm:text-sm text-left transition-all duration-300",
           "bg-linear-to-r from-surface-high/95 to-surface/95 backdrop-blur-sm",
           "shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:border-white/15 hover:from-surface-high hover:to-surface-high",
           "focus:outline-none focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(239,68,68,0.18),0_0_24px_rgba(239,68,68,0.08)]",
@@ -100,7 +100,7 @@ export function Select({
           className
         )}
       >
-        <span className={cn("truncate pr-3 text-text-primary", !selectedOption && "text-text-muted")}>
+        <span className={cn("whitespace-normal break-words pr-3 text-text-primary", !selectedOption && "text-text-muted")}>
           {selectedOption?.label || placeholder}
         </span>
         <ChevronDown className={cn(

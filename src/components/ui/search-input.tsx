@@ -22,7 +22,7 @@ export default function SearchInput({ value, onChange, placeholder = "Buscar..."
         value={value}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="relative w-full rounded-xl border border-white/10 bg-void/70 pl-11 pr-11 py-3.5 text-sm text-white placeholder:text-text-muted/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm outline-none transition-all duration-300 font-body hover:border-white/15 hover:bg-void/80 focus:border-primary/50 focus:bg-void/85 focus:shadow-[0_0_0_1px_rgba(239,68,68,0.18),0_0_24px_rgba(239,68,68,0.08)]"
+        className="relative w-full rounded-xl border border-white/10 bg-void/70 pl-10 pr-10 py-2.5 sm:pl-11 sm:pr-11 sm:py-3.5 text-xs sm:text-sm text-white placeholder:text-text-muted/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm outline-none transition-all duration-300 font-body hover:border-white/15 hover:bg-void/80 focus:border-primary/50 focus:bg-void/85 focus:shadow-[0_0_0_1px_rgba(239,68,68,0.18),0_0_24px_rgba(239,68,68,0.08)]"
       />
       {value && (
         <button
