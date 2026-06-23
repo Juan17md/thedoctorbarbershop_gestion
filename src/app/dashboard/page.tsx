@@ -364,12 +364,22 @@ export default function DashboardPage() {
     {
       label: "Registrar Servicio",
       descripcion: "Agrega un nuevo servicio al registro",
-      href: "/dashboard/finanzas",
-      icon: DollarSign,
+      modal: true,
+      icon: Plus,
       colorIcono: "text-emerald-400",
       bgIcono: "bg-emerald-400/10",
       bordeIcono: "border-emerald-400/20",
       hoverCard: "hover:border-emerald-400/30 hover:bg-emerald-400/5",
+    },
+    {
+      label: "Mis Finanzas",
+      descripcion: "Revisa tus ingresos y rendimiento",
+      href: "/dashboard/finanzas",
+      icon: DollarSign,
+      colorIcono: "text-cyan-400",
+      bgIcono: "bg-cyan-400/10",
+      bordeIcono: "border-cyan-400/20",
+      hoverCard: "hover:border-cyan-400/30 hover:bg-cyan-400/5",
     },
     {
       label: "Mis Reservas",
@@ -465,14 +475,12 @@ export default function DashboardPage() {
           Acciones Rápidas
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {accionesRapidas.map((accion) => {
+          {accionesRapidas.map((accion, i) => {
             const Icono = accion.icon;
-            return (
-              <Link
-                key={accion.href}
-                href={accion.href}
-                className={`group card-premium p-5 flex items-center gap-4 transition-all duration-300 border border-border-subtle ${accion.hoverCard}`}
-              >
+            const key = accion.href || `accion-${i}`;
+            const clases = `group card-premium p-5 flex items-center gap-4 transition-all duration-300 border border-border-subtle ${accion.hoverCard}`;
+            const contenido = (
+              <>
                 <div className={`w-12 h-12 rounded-xl ${accion.bgIcono} border ${accion.bordeIcono} flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110`}>
                   <Icono size={22} className={accion.colorIcono} />
                 </div>
@@ -481,6 +489,18 @@ export default function DashboardPage() {
                   <p className="text-text-muted text-[11px] mt-1 leading-snug">{accion.descripcion}</p>
                 </div>
                 <ArrowRight size={16} className="text-text-muted group-hover:text-text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+              </>
+            );
+            if (accion.modal) {
+              return (
+                <button key={key} onClick={() => setIsModalOpen(true)} className={`${clases} w-full text-left`}>
+                  {contenido}
+                </button>
+              );
+            }
+            return (
+              <Link key={key} href={accion.href!} className={clases}>
+                {contenido}
               </Link>
             );
           })}
@@ -542,9 +562,9 @@ export default function DashboardPage() {
 
         {/* Tus Servicios de la Semana */}
         <div className="card-premium p-6">
-          <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
-            <History size={22} className="text-primary" />
-            TUS SERVICIOS DE LA <span className="text-primary">SEMANA</span>
+          <h3 className="font-display text-sm sm:text-2xl text-text-primary mb-6 flex items-center gap-3 tracking-[0.05em] uppercase">
+            <History size={16} className="text-primary shrink-0 sm:size-[22px]" />
+            <span className="sm:whitespace-nowrap">TUS SERVICIOS DE LA <span className="text-primary">SEMANA</span></span>
           </h3>
 
           {/* Vista Escritorio (Tabla) */}
