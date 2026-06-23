@@ -733,7 +733,7 @@ export default function FinanzasPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {/* Card Servicios Count */}
         <div className="card-premium p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
@@ -743,7 +743,7 @@ export default function FinanzasPage() {
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Servicios</p>
           </div>
           <div className="mt-auto">
-            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">{filteredRecords.length}</p>
+            <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">{filteredRecords.length}</p>
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2 flex items-center gap-1">
               <TrendingUp size={10} className="text-emerald-500" /> Total Realizados
             </p>
@@ -759,7 +759,7 @@ export default function FinanzasPage() {
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">{isAdmin ? "Ingreso Barberos" : "Tu Parte"}</p>
           </div>
           <div className="mt-auto">
-            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${barberShare.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{barberShare.toFixed(2).split('.')[1]}</span></p>
+            <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${barberShare.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{barberShare.toFixed(2).split('.')[1]}</span></p>
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">60% de Comisiones</p>
           </div>
         </div>
@@ -773,7 +773,7 @@ export default function FinanzasPage() {
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Barbería</p>
           </div>
           <div className="mt-auto">
-            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${barberiaShare.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{barberiaShare.toFixed(2).split('.')[1]}</span></p>
+            <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${barberiaShare.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{barberiaShare.toFixed(2).split('.')[1]}</span></p>
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">40% de Comisiones</p>
           </div>
         </div>
@@ -787,31 +787,31 @@ export default function FinanzasPage() {
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Total Generado</p>
           </div>
           <div className="mt-auto">
-            <p className="font-display text-5xl text-white font-bold tracking-tighter leading-none">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-2xl opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
+            <p className="font-display text-4xl sm:text-5xl text-white font-bold tracking-tighter leading-none">${totalRevenue.toFixed(2).split('.')[0]}<span className="text-xl sm:text-2xl opacity-50">.{totalRevenue.toFixed(2).split('.')[1]}</span></p>
             <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-2">Ingreso bruto semanal</p>
           </div>
         </div>
 
         {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up col-span-full">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up col-span-full">
           <div className="card-premium p-6 border-l-4 border-l-emerald-500/80">
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Ingresos (Actas)</p>
-            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
+            <p className="font-display text-2xl sm:text-3xl text-white font-bold tracking-tight leading-none">${ingresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-red-500/80">
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Egresos (Gastos)</p>
-            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
+            <p className="font-display text-2xl sm:text-3xl text-white font-bold tracking-tight leading-none">${egresos.toFixed(2)}</p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-cyan-500/80">
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Semanal</p>
-            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">
+            <p className="font-display text-2xl sm:text-3xl text-white font-bold tracking-tight leading-none">
               ${(ingresos + barberiaShare - egresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(ingresos + barberiaShare - egresos).toFixed(2).split('.')[1]}</span>
             </p>
           </div>
           <div className="card-premium p-6 border-l-4 border-l-primary-light bg-linear-to-br from-primary/10 to-transparent">
             <p className="text-text-secondary font-display text-[10px] tracking-widest uppercase mb-3 font-bold opacity-60">Balance Neto Global</p>
-            <p className="font-display text-3xl text-white font-bold tracking-tight leading-none">
-              ${(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(globalIngresos + globalBarberiaShare - globalEgresos).toFixed(2).split('.')[1]}</span>
+            <p className="font-display text-2xl sm:text-3xl text-white font-bold tracking-tight leading-none">
+              ${(totalRevenue + barberiaShare - totalEgresos).toFixed(2).split('.')[0]}<span className="text-xl opacity-50">.{(totalRevenue + barberiaShare - totalEgresos).toFixed(2).split('.')[1]}</span>
             </p>
           </div>
         </div>
